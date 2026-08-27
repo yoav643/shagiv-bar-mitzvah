@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="Cache-Control" content="no-cache" />
   <title>כסף מהאורחים</title>
   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;700;800&family=Frank+Ruhl+Libre:wght@700;900&display=swap" rel="stylesheet" />
   <style>
@@ -30,13 +29,19 @@
     .row .meta{display:block;font-size:12px;color:#7a7366}
     .amt{width:92px;direction:ltr;text-align:left;font-weight:700}
     .del{border:0;background:#f3e8e8;color:#7a2e2e;border-radius:10px;padding:8px 10px;font-weight:800;margin-top:8px}
-    #note{text-align:center;color:#5a5346;margin-top:8px}
+    #note{text-align:center;color:#5a5346;margin-top:8px;white-space:pre-wrap}
+    .warn{background:#fff3d6;border-radius:12px;padding:10px;font-size:13px;line-height:1.45;margin:8px 0}
   </style>
 </head>
 <body>
 <div class="wrap">
   <h1>כסף מהאורחים</h1>
   <a class="btn" href="admin.html">חזרה לניהול</a>
+  <div class="box">
+    <label>מפתח GitHub לשמירת guests.json</label>
+    <input id="token" placeholder="ghp_... מדביקים כאן במכשיר" autocomplete="off" />
+    <div class="warn">בלי מפתח אי אפשר לעדכן את הקובץ בשרת. צרו: טוקן classic עם הרשאת repo לחשבון yoav643.</div>
+  </div>
   <div class="sum"><b id="total">0 ₪</b><span id="filled">טוען</span></div>
   <div class="box">
     <label>הוספת שם</label>
@@ -63,62 +68,49 @@
   <p id="note"></p>
 </div>
 <script>
-const FILE='guests.json';
-const ALBUM='8tTholr', HASH='NdLqXZP84fljVlK', AUTH='Client-ID 546c25a59c58ad7';
+const REPO='yoav643/shagiv-bar-mitzvah';
+const PATH='guests.json';
+const API='https://api.github.com/repos/'+REPO+'/contents/'+PATH;
+const RAW='https://raw.githubusercontent.com/'+REPO+'/main/'+PATH;
 const note=document.getElementById('note');
+const tokenEl=document.getElementById('token');
 let file={guests:[], extras:[]};
-let ids={};
+let sha='';
 let filterMode='all';
 let tmr=null;
+tokenEl.value=localStorage.getItem('shagiv-gh-token')||'';
+tokenEl.onchange=tokenEl.onblur=()=>localStorage.setItem('shagiv-gh-token', tokenEl.value.trim());
+function token(){ return (tokenEl.value||localStorage.getItem('shagiv-gh-token')||'').trim(); }
 function keyOf(g){ return String(g.name||'')+'|'+String(g.table||''); }
 function num(v){ const n=Number(String(v==null?'':v).replace(/[^0-9.]/g,'')); return isFinite(n)&&n>0?n:0; }
-function enc(s){ return encodeURIComponent(s||''); }
-function dec(s){ try{return decodeURIComponent(s||'');}catch(e){return s||'';} }
 function people(){
   return (file.guests||[]).map(g=>Object.assign({extra:false},g))
-    .concat((file.extras||[]).map(g=>Object.assign({extra:true,guests:g.guests||1},g)));
+    .concat((file.extras||[]).map(g=>Object.assign({extra:true, guests:g.guests||1},g)));
 }
 function target(k){ return (file.guests||[]).find(g=>keyOf(g)===k) || (file.extras||[]).find(g=>keyOf(g)===k); }
-async function removeId(id){
-  if(!id) return;
-  try{ await fetch('https://api.imgur.com/3/album/'+HASH+'/remove_images',{method:'POST', headers:{Authorization:AUTH}, body:new URLSearchParams({ids:String(id)})}); }catch(e){}
+async function loadJson(){
+  const r=await fetch(API+'?t='+Date.now(), {headers: token()?{Authorization:'Bearer '+token(), Accept:'application/vnd.github+json'}:{Accept:'application/vnd.github+json'}, cache:'no-store'});
+  if(r.ok){
+    const js=await r.json();
+    sha=js.sha||'';
+    const text=decodeURIComponent(escape(atob(String(js.content||'').replace(/\n/g,''))));
+    file=JSON.parse(text);
+    return;
+  }
+  file=await (await fetch(RAW+'?t='+Date.now(),{cache:'no-store'})).json();
 }
-function blob8(){
-  const c=document.createElement('canvas'); c.width=8;c.height=8;
-  c.getContext('2d').fillRect(0,0,8,8);
-  return new Promise(r=>c.toBlob(r,'image/jpeg',.4));
-}
-async function upload(desc){
-  const fd=new FormData();
-  fd.append('image', new File([await blob8()],'g.jpg',{type:'image/jpeg'}));
-  fd.append('album', HASH);
-  fd.append('description', desc);
-  const js=await (await fetch('https://api.imgur.com/3/upload',{method:'POST', headers:{Authorization:AUTH}, body:fd})).json();
-  if(!js||!js.success||!js.data||!js.data.id) throw new Error('upload');
-  return js.data.id;
-}
-async function saveOne(k){
-  const g=target(k); if(!g) return;
-  const extra=!!(file.extras||[]).find(x=>keyOf(x)===k);
-  const desc=(extra?'X|':'G|')+enc(g.name)+'|'+enc(g.table||'')+'|'+num(g.amount)+'|'+enc(g.desc||'');
-  for(const id of (ids[k]||[])) await removeId(id);
-  ids[k]=[await upload(desc)];
-}
-async function saveExtras(){
-  for(const id of (ids['__extras']||[])) await removeId(id);
-  ids['__extras']=[await upload('L|'+enc(JSON.stringify(file.extras||[])))];
-}
-async function persistAll(reason){
-  note.textContent='שומר בשרת...';
-  try{
-    if(reason==='extras') await saveExtras();
-    else if(reason) await saveOne(reason);
-    else {
-      await saveExtras();
-      for(const g of people()) if(num(g.amount)||g.desc||g.extra) await saveOne(keyOf(g));
-    }
-    note.textContent='נשמר בשרת — מופיע בכל הדפדפנים';
-  }catch(e){ note.textContent='השמירה לשרת נכשלה, נסו שוב'; throw e; }
+async function saveJson(){
+  const t=token();
+  if(!t){ note.textContent='חסר מפתח GitHub כדי לשמור לקובץ בשרת'; return false; }
+  note.textContent='שומר ל-guests.json...';
+  const body=JSON.stringify(file,null,2);
+  const content=btoa(unescape(encodeURIComponent(body)));
+  const r=await fetch(API,{method:'PUT', headers:{Authorization:'Bearer '+t, Accept:'application/vnd.github+json', 'Content-Type':'application/json'}, body:JSON.stringify({message:'update guests money', content, sha, branch:'main'})});
+  const js=await r.json();
+  if(!r.ok){ note.textContent='שמירה נכשלה: '+(js.message||r.status); return false; }
+  sha=js.content&&js.content.sha||sha;
+  note.textContent='נשמר ב-guests.json בשרת';
+  return true;
 }
 function totals(){
   const p=people(); let sum=0, filled=0;
@@ -148,62 +140,14 @@ function draw(){
     html+='</div>';
   }
   document.getElementById('list').innerHTML=html||'<p style="text-align:center">לא נמצאו</p>';
-  function bind(inp, kind){
-    const run=()=>{
-      const k=inp.dataset.key||inp.dataset.desc;
-      const t=target(k); if(!t) return;
-      if(kind==='amt') t.amount=num(inp.value);
-      else t.desc=inp.value.trim();
-      totals();
-      clearTimeout(tmr);
-      tmr=setTimeout(()=>persistAll(k), 400);
-    };
-    inp.oninput=run; inp.onchange=run; inp.onblur=()=>persistAll(inp.dataset.key||inp.dataset.desc);
-  }
+  const bind=(inp,kind)=>{
+    const run=()=>{ const t=target(inp.dataset.key||inp.dataset.desc); if(!t) return; if(kind==='amt') t.amount=num(inp.value); else t.desc=inp.value.trim(); totals(); clearTimeout(tmr); tmr=setTimeout(saveJson,500); };
+    inp.oninput=run; inp.onchange=run; inp.onblur=saveJson;
+  };
   document.querySelectorAll('input.amt').forEach(i=>bind(i,'amt'));
   document.querySelectorAll('input.desc').forEach(i=>bind(i,'desc'));
-  document.querySelectorAll('[data-del]').forEach(btn=>btn.onclick=async()=>{
-    if(!confirm('למחוק?')) return;
-    const k=btn.dataset.del;
-    file.extras=(file.extras||[]).filter(g=>keyOf(g)!==k);
-    for(const id of (ids[k]||[])) await removeId(id);
-    delete ids[k];
-    draw(); await persistAll('extras');
-  });
+  document.querySelectorAll('[data-del]').forEach(btn=>btn.onclick=async()=>{ if(!confirm('למחוק?')) return; file.extras=(file.extras||[]).filter(g=>keyOf(g)!==btn.dataset.del); draw(); await saveJson(); });
   totals();
-}
-async function loadServer(){
-  const js=await (await fetch('https://api.imgur.com/3/album/'+ALBUM+'/images?t='+Date.now(),{headers:{Authorization:AUTH},cache:'no-store'})).json();
-  const extras=[];
-  ids={};
-  for(const x of (js.data||[])){
-    const d=String(x.description||x.title||'');
-    if(d.startsWith('L|')){
-      ids.__extras=(ids.__extras||[]).concat([x.id]);
-      try{ const arr=JSON.parse(dec(d.slice(2))); if(Array.isArray(arr)) extras.push.apply(extras,arr); }catch(e){}
-      continue;
-    }
-    if(!d.startsWith('G|') && !d.startsWith('X|')) continue;
-    const extra=d.startsWith('X|');
-    const p=d.split('|');
-    const name=dec(p[1]||''), table=dec(p[2]||''), amount=num(p[3]), desc=dec(p.slice(4).join('|'));
-    const k=name+'|'+table;
-    ids[k]=(ids[k]||[]).concat([x.id]);
-    const t=target(k);
-    if(t){ t.amount=amount; t.desc=desc; }
-    else if(extra) extras.push({name,table,guests:1,amount,desc});
-  }
-  const seen=new Set((file.extras||[]).map(keyOf));
-  file.extras=file.extras||[];
-  for(const g of extras){ if(g.name && !seen.has(keyOf(g))){ file.extras.push(g); seen.add(keyOf(g)); } }
-}
-async function boot(){
-  try{ file=await (await fetch(FILE+'?t='+Date.now(),{cache:'no-store'})).json(); }
-  catch(e){ file={guests:[], extras:[]}; }
-  file.extras=file.extras||[];
-  try{ await loadServer(); note.textContent='נטען מהשרת'; }
-  catch(e){ note.textContent='נטען רק את רשימת השמות'; }
-  draw();
 }
 document.getElementById('addBtn').onclick=async()=>{
   const name=document.getElementById('newName').value.trim();
@@ -211,20 +155,16 @@ document.getElementById('addBtn').onclick=async()=>{
   const table=document.getElementById('newTable').value.trim();
   if(!name){ note.textContent='חסר שם'; return; }
   if(people().some(g=>g.name===name && String(g.table)===String(table))){ note.textContent='השם כבר קיים'; return; }
-  file.extras.push({name, table, guests:1, amount:0, desc});
+  file.extras=file.extras||[];
+  file.extras.push({name,table,guests:1,amount:0,desc});
   document.getElementById('newName').value='';
-  document.getElementById('addBtn').disabled=true;
-  draw();
-  try{ await persistAll(keyOf({name,table})); await persistAll('extras'); }
-  finally{ document.getElementById('addBtn').disabled=false; }
+  draw(); await saveJson();
 };
 document.getElementById('q').oninput=draw;
-document.getElementById('allBtn').onclick=()=>{filterMode='all'; document.querySelectorAll('.filt button').forEach(b=>b.classList.remove('on')); allBtn.classList.add('on'); draw();};
-const allBtn=document.getElementById('allBtn');
-document.getElementById('missBtn').onclick=()=>{filterMode='miss'; document.querySelectorAll('.filt button').forEach(b=>b.classList.remove('on')); missBtn.classList.add('on'); draw();};
-const missBtn=document.getElementById('missBtn');
-document.getElementById('hasBtn').onclick=()=>{filterMode='has'; document.querySelectorAll('.filt button').forEach(b=>b.classList.remove('on')); hasBtn.classList.add('on'); draw();};
-const hasBtn=document.getElementById('hasBtn');
-boot();
+const allBtn=document.getElementById('allBtn'), missBtn=document.getElementById('missBtn'), hasBtn=document.getElementById('hasBtn');
+allBtn.onclick=()=>{filterMode='all'; document.querySelectorAll('.filt button').forEach(b=>b.classList.remove('on')); allBtn.classList.add('on'); draw();};
+missBtn.onclick=()=>{filterMode='miss'; document.querySelectorAll('.filt button').forEach(b=>b.classList.remove('on')); missBtn.classList.add('on'); draw();};
+hasBtn.onclick=()=>{filterMode='has'; document.querySelectorAll('.filt button').forEach(b=>b.classList.remove('on')); hasBtn.classList.add('on'); draw();};
+(async()=>{ try{ await loadJson(); note.textContent='נטען מ-guests.json'; }catch(e){ note.textContent='לא הצלחתי לטעון את הקובץ'; file={guests:[],extras:[]}; } draw(); })();
 </script>
 </body></html>
