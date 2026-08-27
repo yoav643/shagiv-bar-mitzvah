@@ -9,11 +9,13 @@ function floorMap(highlight){
   return `<div class="map-wrap"><div class="map-title">מפת האולם · השולחן שלכם מסומן בזהב</div><svg class="floor" viewBox="0 0 280 270"><rect x="1" y="1" width="278" height="268" rx="10" fill="#fbf6ea" stroke="#d7cbb3"/><ellipse class="dance" cx="108" cy="175" rx="34" ry="26"/><text class="zone-txt" x="108" y="176">רחבה</text><rect class="zone" x="86" y="236" width="36" height="18" rx="3"/><text class="zone-txt" x="104" y="247">בר</text><rect class="zone" x="58" y="236" width="24" height="18" rx="3"/><text class="zone-txt" x="70" y="247">DJ</text><line class="wall" x1="8" y1="56" x2="148" y2="56"/><line class="wall" x1="210" y1="8" x2="210" y2="262"/>${rects}<path d="M42 248 L42 222" stroke="#1a2744" fill="none"/><polygon fill="#1a2744" points="42,216 38,224 46,224"/><text class="zone-txt" x="42" y="260">כניסה</text></svg></div>`;
 }
 function search(){
-  const q=normalize(document.getElementById("phone").value);
+  const phoneEl=document.getElementById("phone");
   const out=document.getElementById("result");
-  if(q.length<9){ out.innerHTML='<div class="box">נא להזין מספר מלא</div>'; return; }
+  if(!phoneEl||!out) return;
+  const q=normalize(phoneEl.value);
+  if(q.length<9){ out.innerHTML='<div class="box">נא להזין מספר טלפון מלא</div>'; return; }
   const hits=GUESTS.filter(g=>(g.phones||[]).some(ph=>{ const p=normalize(ph); return p===q||(p&&q&&p.slice(-9)===q.slice(-9)); }));
-  if(!hits.length){ out.innerHTML='<div class="box">לא מצאנו את המספר</div>'; return; }
+  if(!hits.length){ out.innerHTML='<div class="box">לא מצאנו את המספר ברשימה</div>'; return; }
   out.innerHTML=hits.map(g=>{
     const grp=groupOf(g.table);
     const mates=GUESTS.filter(x=>grp.includes(String(x.table)));
@@ -23,8 +25,14 @@ function search(){
     return `<div class="box"><div class="name">${g.name}</div><div class="table-num">${title}</div><div class="table-label">${label}</div><div class="mates"><h4>מי איתכם בשולחן?</h4><ul>${list}</ul></div>${floorMap(g.table)}</div>`;
   }).join("");
 }
-document.getElementById("go").onclick=search;
-document.getElementById("phone").addEventListener("keydown",e=>{ if(e.key==="Enter") search(); });
+function bindSearch(){
+  const go=document.getElementById("go");
+  const phone=document.getElementById("phone");
+  if(go) go.onclick=search;
+  if(phone) phone.addEventListener("keydown",e=>{ if(e.key==="Enter") search(); });
+}
+if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", bindSearch);
+else bindSearch();
 const EVENT_AT=new Date("2026-08-27T19:30:00+03:00").getTime();
 function tick(){
   const el=document.getElementById("countdown"); if(!el) return;
