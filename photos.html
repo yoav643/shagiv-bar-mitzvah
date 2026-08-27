@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta http-equiv="Cache-Control" content="no-cache" />
   <title>אלבום משותף · שגיב</title>
   <style>
     body { margin:0; font-family:Arial,sans-serif; background:#1a2744; color:#2a2418; }
@@ -17,8 +18,8 @@
     .rec { background:#7a2e2e; color:#fff; }
     .del { background:#eee; color:#7a2e2e; margin-top:8px; width:100%; }
     .back { display:block; text-align:center; text-decoration:none; background:#fff; color:#1a2744; margin-top:12px; }
-    .hidden { position:absolute; opacity:0; width:1px; height:1px; }
-    #note { min-height:22px; text-align:center; font-size:14px; font-weight:700; }
+    .hidden { position:absolute; opacity:0; pointer-events:none; }
+    #note { min-height:22px; text-align:center; font-size:14px; font-weight:700; white-space:pre-wrap; }
     .item { background:#fff; border-radius:12px; padding:8px; margin-top:8px; text-align:center; }
     .item img, .item video { width:100%; border-radius:8px; max-height:220px; object-fit:cover; }
   </style>
@@ -26,7 +27,7 @@
 <body>
   <div class="card">
     <h1>אלבום משותף</h1>
-    <p>סלפי · קבצים נשמרים 48 שעות · כולם רואים את אותו אלבום</p>
+    <p>סלפי · נשמר עד 48 שעות</p>
     <video id="live" playsinline autoplay muted></video>
     <div class="row">
       <button class="cam" id="startCam" type="button">הפעלת מצלמה</button>
@@ -52,70 +53,105 @@
     let owner=localStorage.getItem(OWNER_KEY);
     if(!owner){ owner='u'+Math.random().toString(36).slice(2)+Date.now().toString(36); localStorage.setItem(OWNER_KEY, owner); }
     function say(t){ note.textContent=t; }
-    async function loadAlbum(){
-      try{
-        const res=await fetch(ALBUM+'?t='+Date.now());
-        const data=await res.json();
-        items=Array.isArray(data.items)?data.items:[];
-        render();
-      }catch(e){}
-    }
-    async function saveAlbum(){
-      await fetch(ALBUM,{ method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({items}) });
+    function merge(arr){
+      const map=new Map(items.map(x=>[x.id,x]));
+      (arr||[]).forEach(x=>{ if(x && x.id) map.set(x.id,x); });
+      items=[...map.values()].sort((a,b)=>String(b.id).localeCompare(String(a.id)));
     }
     function render(){
       list.innerHTML=items.map(it=>{
-        const media=it.video?'<video src="'+it.url+'" controls></video>':'<img src="'+it.url+'" alt="">';
+        const src=it.url||it.local;
+        if(!src) return '';
+        const media=it.video?'<video src="'+src+'" controls></video>':'<img src="'+src+'" alt="">';
         const del=it.owner===owner?'<button class="del" data-id="'+it.id+'">מחיקה</button>':'';
         return '<div class="item">'+media+del+'</div>';
       }).join('');
       list.querySelectorAll('.del').forEach(btn=>btn.onclick=async()=>{
         items=items.filter(x=>!(x.id===btn.dataset.id && x.owner===owner));
-        render(); await saveAlbum();
+        render(); saveAlbum();
       });
+    }
+    async function loadAlbum(){
+      try{
+        const res=await fetch(ALBUM+'?t='+Date.now(), {cache:'no-store'});
+        const data=await res.json();
+        merge(data.items||[]);
+        render();
+      }catch(e){}
+    }
+    async function saveAlbum(){
+      try{
+        await fetch(ALBUM, { method:'POST', body: JSON.stringify({items}), cache:'no-store' });
+      }catch(e){}
+      try{
+        await fetch(ALBUM, { method:'PUT', body: JSON.stringify({items}), cache:'no-store' });
+      }catch(e){}
+    }
+    async function hostFile(file){
+      const fd=new FormData(); fd.append('file', file); fd.append('expire','172800');
+      const r=await fetch('https://tmpfiles.org/api/v1/upload',{method:'POST', body:fd});
+      const txt=await r.text();
+      let data=null; try{ data=JSON.parse(txt); }catch(e){ throw new Error('שרת הקבצים החזיר תשובה לא תקינה'); }
+      if(!data || data.status!=='success' || !data.data || !data.data.url) throw new Error((data && data.message) || 'העלאת קובץ נכשלה');
+      return String(data.data.url).replace('tmpfiles.org/','tmpfiles.org/dl/');
     }
     async function startCamera(){
       try{
         if(stream) stream.getTracks().forEach(t=>t.stop());
         stream=await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user' }, audio:true });
         live.srcObject=stream; await live.play(); say('מצלמת סלפי פעילה');
-      }catch(e){ say('אשרו הרשאת מצלמה'); }
+      }catch(e){ say('אשרו הרשאת מצלמה בדפדפן'); }
     }
     document.getElementById('startCam').onclick=startCamera;
     document.getElementById('openGal').onclick=()=>gal.click();
     document.getElementById('snap').onclick=async()=>{
-      if(!live.videoWidth){ await startCamera(); return; }
+      if(!live.videoWidth){ await startCamera(); if(!live.videoWidth) return; }
       const c=document.createElement('canvas');
       c.width=live.videoWidth; c.height=live.videoHeight;
       const ctx=c.getContext('2d'); ctx.translate(c.width,0); ctx.scale(-1,1); ctx.drawImage(live,0,0);
-      c.toBlob(blob=>upload(blob,'selfie-'+Date.now()+'.jpg', false),'image/jpeg',0.9);
+      const blob=await new Promise(res=>c.toBlob(res,'image/jpeg',0.9));
+      if(!blob){ say('לא הצלחנו לצלום'); return; }
+      upload(blob,'selfie-'+Date.now()+'.jpg', false);
     };
     document.getElementById('rec').onclick=async()=>{
       if(!stream){ await startCamera(); if(!stream) return; }
       if(recorder && recorder.state==='recording'){ recorder.stop(); return; }
-      chunks=[]; recorder=new MediaRecorder(stream);
-      recorder.ondataavailable=e=>{ if(e.data.size) chunks.push(e.data); };
-      recorder.onstop=()=>{ upload(new Blob(chunks,{type:recorder.mimeType||'video/webm'}),'video-'+Date.now()+'.webm', true); document.getElementById('rec').textContent='הקלט סרטון'; };
-      recorder.start(); document.getElementById('rec').textContent='עצור הקלטה'; say('מקליט...');
+      chunks=[];
+      const mime=['video/mp4','video/webm'].find(t=>window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t))||'';
+      recorder=mime?new MediaRecorder(stream,{mimeType:mime}):new MediaRecorder(stream);
+      recorder.ondataavailable=e=>{ if(e.data && e.data.size) chunks.push(e.data); };
+      recorder.onstop=()=>{
+        const blob=new Blob(chunks,{type:recorder.mimeType||'video/webm'});
+        const ext=(blob.type||'').includes('mp4')?'mp4':'webm';
+        upload(blob,'video-'+Date.now()+'.'+ext, true);
+        document.getElementById('rec').textContent='הקלט סרטון';
+      };
+      recorder.start();
+      document.getElementById('rec').textContent='עצור הקלטה';
+      say('מקליט...');
     };
-    gal.onchange=()=>{ [...gal.files].forEach(f=>upload(f,f.name,(f.type||'').startsWith('video'))); };
+    gal.onchange=()=>{ [...gal.files].forEach(f=>upload(f, f.name || ('file-'+Date.now()), (f.type||'').startsWith('video'))); };
     async function upload(blob, name, video){
-      say('מעלה לאלבום המשותף...');
-      const fd=new FormData(); fd.append('file', blob, name); fd.append('expire','172800');
+      const local=URL.createObjectURL(blob);
+      const id=Date.now()+'-'+Math.random().toString(36).slice(2,7);
+      items.unshift({ id, url:'', local, video:!!video, owner });
+      render();
+      say('מעלה לאלבום...');
       try{
-        const res=await fetch('https://tmpfiles.org/api/v1/upload',{method:'POST', body:fd});
-        const data=await res.json();
-        if(data.status!=='success' || !data.data || !data.data.url){ say('ההעלאה נכשלה'); return; }
-        const url=String(data.data.url).replace('tmpfiles.org/','tmpfiles.org/dl/');
-        await loadAlbum();
-        items.unshift({ id: Date.now()+'-'+Math.random().toString(36).slice(2,7), url, video:!!video, owner });
-        await saveAlbum();
+        const file=new File([blob], name, { type: blob.type || (video?'video/webm':'image/jpeg') });
+        const url=await hostFile(file);
+        const found=items.find(x=>x.id===id);
+        if(found){ found.url=url; delete found.local; }
         render();
-        say('עלה לאלבום. נשמר 48 שעות');
-      }catch(e){ say('לא הצלחנו להעלות'); }
+        await saveAlbum();
+        await loadAlbum();
+        say('עלה לאלבום המשותף');
+      }catch(e){
+        say('הקובץ נשמר אצלכם בדף, אבל ההעלאה לשרת נכשלה:\n'+(e.message||e));
+      }
     }
     loadAlbum();
-    setInterval(loadAlbum, 12000);
+    setInterval(loadAlbum, 8000);
     startCamera();
   </script>
 </body>
