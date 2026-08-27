@@ -17,7 +17,6 @@
     .item img,.item video{width:100%;height:160px;object-fit:cover;display:block;background:#000}
     .open{display:block;text-align:center;font-size:13px;font-weight:800;padding:8px;background:#f3ead8;color:#1a2744;text-decoration:none}
     .del{width:100%;border:0;background:#eee;color:#7a2e2e;font-weight:800;padding:8px}
-    .empty{grid-column:1/-1;text-align:center;font-weight:700;padding:18px}
   </style>
 </head>
 <body>
@@ -38,15 +37,25 @@
 <script>
 const ALBUM_ID='LZUxwoK', HASH='zlu4GEWHMh6vEso', AUTH='Client-ID 546c25a59c58ad7';
 const STORE='https://extendsclass.com/api/json-storage/bin/bacfbbe';
-let owner=localStorage.getItem('shagiv-owner')||'';
-let onlyMine=false, ALL=[];
+let owner=localStorage.getItem('shagiv-owner')||'', onlyMine=false, ALL=[];
 function mineIds(){ try{return JSON.parse(localStorage.getItem('shagiv-mine-ids')||'[]');}catch(e){return[];} }
 function parseDesc(d){ d=String(d||''); if(d.startsWith('VID|')){ const p=d.split('|'); return {video:true,owner:p[1]||'',url:p.slice(2).join('|')}; } return {video:false,owner:d,url:''}; }
 function isMine(it){ return (it.owner&&owner&&it.owner===owner)||mineIds().includes(it.id); }
+async function rawVideo(url){
+  if(!url || url.indexOf('tmpfiles.org')<0) return url;
+  if(/\/dl\/[^/]+\/[^/]+\//.test(url)) return url;
+  const view=url.replace('https://tmpfiles.org/dl/','https://tmpfiles.org/');
+  try{
+    const page=await (await fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(view))).text();
+    const m=page.match(/https:\/\/tmpfiles\.org\/dl\/[^"'\s<]+/);
+    if(m) return m[0];
+  }catch(e){}
+  return view;
+}
 const grid=document.getElementById('grid'), note=document.getElementById('note'), mineBtn=document.getElementById('mineBtn');
 function draw(){
   const list=onlyMine?ALL.filter(isMine):ALL;
-  if(!list.length){ grid.innerHTML='<div class="empty">עדיין אין תמונות</div>'; note.textContent=''; return; }
+  if(!list.length){ grid.innerHTML='<div style="grid-column:1/-1;text-align:center;font-weight:700;padding:18px">עדיין אין תמונות</div>'; note.textContent=''; return; }
   grid.innerHTML=list.map(it=>{
     const media=it.video?('<video src="'+it.url+'" controls playsinline></video><a class="open" href="'+it.url+'" target="_blank" rel="noopener">פתיחת סרטון</a>'):('<a href="'+it.url+'" target="_blank" rel="noopener"><img src="'+it.url+'"></a>');
     const del=isMine(it)?'<button class="del" data-id="'+it.id+'">מחיקת התמונה שלי</button>':'';
@@ -58,17 +67,14 @@ function draw(){
 async function load(){
   const map=new Map();
   try{
-    const res=await fetch('https://api.imgur.com/3/album/'+ALBUM_ID+'/images?t='+Date.now(),{headers:{Authorization:AUTH},cache:'no-store'});
-    const js=await res.json();
-    (js.data||[]).forEach(x=>{
+    const js=await (await fetch('https://api.imgur.com/3/album/'+ALBUM_ID+'/images?t='+Date.now(),{headers:{Authorization:AUTH},cache:'no-store'})).json();
+    for(const x of (js.data||[])){
       const meta=parseDesc(x.description||x.title||'');
       const video=!!(meta.video||String(x.type||'').startsWith('video')||x.mp4);
-      map.set(x.id,{id:x.id,url:video?(meta.url||x.mp4||x.link):x.link,video,owner:meta.owner});
-    });
-  }catch(e){}
-  try{
-    const st=await (await fetch(STORE+'?t='+Date.now(),{cache:'no-store'})).json();
-    (st.items||[]).forEach(x=>{ if(x&&x.id&&x.url&&!map.has(x.id)) map.set(x.id,x); });
+      let url=video?(meta.url||x.mp4||x.link):x.link;
+      if(video) url=await rawVideo(url);
+      map.set(x.id,{id:x.id,url,video,owner:meta.owner});
+    }
   }catch(e){}
   ALL=[...map.values()];
   draw();
@@ -76,12 +82,7 @@ async function load(){
 async function delOne(id){
   if(!confirm('למחוק?')) return;
   try{ await fetch('https://api.imgur.com/3/album/'+HASH+'/remove_images',{method:'POST', headers:{Authorization:AUTH}, body:new URLSearchParams({ids:id})}); }catch(e){}
-  try{
-    const st=await (await fetch(STORE+'?t='+Date.now(),{cache:'no-store'})).json();
-    st.items=(st.items||[]).filter(x=>x.id!==id);
-    await fetch(STORE,{method:'PUT', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(st)});
-  }catch(e){}
-  load();
+  setTimeout(load,800);
 }
 async function zipOf(list,name){
   if(!list.length) return;
@@ -93,6 +94,6 @@ async function zipOf(list,name){
 mineBtn.onclick=()=>{ onlyMine=!onlyMine; mineBtn.textContent=onlyMine?'הצג את הכל':'הצג רק מה שצילמתי'; draw(); };
 document.getElementById('dlMine').onclick=()=>zipOf(ALL.filter(isMine),'shagiv-mine.zip');
 document.getElementById('dl').onclick=()=>zipOf(ALL,'album-shagiv.zip');
-load(); setInterval(load,7000);
+load(); setInterval(load,8000);
 </script>
 </body></html>
