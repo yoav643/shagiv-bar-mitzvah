@@ -25,8 +25,8 @@
 </head>
 <body>
   <div class="card">
-    <h1>אלבום משותף</h1>
-    <p>סלפי · התמונות מופיעות כאן למטה</p>
+    <h1>צילום לאלבום</h1>
+    <p>אחרי ההעלאה התמונה צריכה להופיע אצל כולם</p>
     <video id="live" playsinline autoplay muted></video>
     <div class="row">
       <button class="cam" id="startCam" type="button">הפעלת מצלמה</button>
@@ -39,6 +39,7 @@
     <input id="gal" class="hidden" type="file" accept="image/*,video/*" multiple />
     <p id="note"></p>
     <div id="list"></div>
+    <a class="back" href="album.html">לאלבום המשותף</a>
     <a class="back" href="./">חזרה</a>
   </div>
   <script>
@@ -69,10 +70,7 @@
       items=[...m.values()].sort((a,b)=>String(b.id).localeCompare(String(a.id)));
     }
     async function loadAlbum(){
-      try{
-        const cached=JSON.parse(localStorage.getItem(CACHE)||'[]');
-        merge(cached);
-      }catch(e){}
+      try{ merge(JSON.parse(localStorage.getItem(CACHE)||'[]')); }catch(e){}
       try{
         const res=await fetch(ALBUM+'?t='+Date.now(), {cache:'no-store'});
         const data=await res.json();
@@ -81,9 +79,18 @@
       }catch(e){ render(); }
     }
     async function saveAlbum(){
-      const payload={ items: items.filter(x=>x.url).map(x=>({id:x.id,url:x.url,video:!!x.video,owner:x.owner})) };
       persist();
-      try{ await fetch(ALBUM,{method:'PUT', body:JSON.stringify(payload)}); }catch(e){}
+      const mine=items.filter(x=>x.url && String(x.url).startsWith('http')).map(x=>({id:x.id,url:x.url,video:!!x.video,owner:x.owner}));
+      try{
+        const res=await fetch(ALBUM+'?t='+Date.now(),{cache:'no-store'});
+        const data=await res.json();
+        const remote=(data.items||[]).filter(x=>x && x.url && String(x.url).startsWith('http'));
+        const map=new Map();
+        remote.forEach(x=>map.set(x.id,x));
+        mine.forEach(x=>map.set(x.id,x));
+        const payload={items:[...map.values()]};
+        await fetch(ALBUM,{method:'PUT', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(payload)});
+      }catch(e){}
     }
     async function hostFile(file, video){
       const fd=new FormData();
@@ -138,13 +145,13 @@
         const it=items.find(x=>x.id===id);
         if(it) it.url=url;
         persist(); render(); await saveAlbum();
-        say('התמונה מופיעה באלבום');
+        say('התמונה מופיעה באלבום של כולם');
       }catch(e){
-        say('רואים אצלכם בדף. העלאה לשרת נכשלה: '+(e.message||e));
+        say('נשמר אצלכם בלבד. העלאה משותפת נכשלה: '+(e.message||e));
       }
     }
     loadAlbum(); startCamera();
-    setInterval(loadAlbum, 10000);
+    setInterval(loadAlbum, 8000);
   </script>
 </body>
 </html>
