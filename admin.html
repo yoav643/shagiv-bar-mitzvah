@@ -3,59 +3,155 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ניהול אלבום</title>
+  <title>ניהול אלבום וברכות</title>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@600;800&family=Frank+Ruhl+Libre:wght@700;900&display=swap" rel="stylesheet" />
   <style>
-    body{margin:0;font-family:Arial,sans-serif;background:#1a2744}
-    .wrap{max-width:440px;margin:16px auto;background:#f7f1e4;border-radius:24px;padding:16px}
-    h1,p{text-align:center}h1{color:#1a2744}
+    :root{--navy:#1a2744;--gold:#c9a227;--cream:#f7f1e4}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{min-height:100vh;background:#1a2744;font-family:Assistant,Arial,sans-serif;display:flex;justify-content:center;padding:16px}
+    .wrap{width:100%;max-width:440px;background:var(--cream);border-radius:24px;padding:16px}
+    h1,h2{text-align:center;color:var(--navy)} h1{font-family:"Frank Ruhl Libre",serif;margin-bottom:8px}
+    h2{font-size:18px;margin:16px 0 8px}
+    .row{display:flex;gap:8px;margin:8px 0}
+    button,.link{border:0;border-radius:12px;padding:12px 8px;font:800 14px Assistant,sans-serif}
+    .navy{background:var(--navy);color:#f3e7b8}
+    .gold{background:var(--gold);color:var(--navy)}
+    .red{background:#7a2e2e;color:#fff}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
     .item{background:#fff;border-radius:12px;overflow:hidden}
-    .item img,.item video{width:100%;height:150px;object-fit:cover;display:block;background:#000}
-    button{width:100%;border:0;padding:10px;font-weight:800;background:#7a2e2e;color:#fff}
-    .all{margin:10px 0;background:#1a2744;color:#f3e7b8;border-radius:12px;padding:14px}
-    a{display:block;text-align:center;margin-top:12px;color:#1a2744;font-weight:800}
+    .item img,.item video{width:100%;height:140px;object-fit:cover;display:block;background:#000}
+    .wish{background:#fff;border-radius:14px;padding:12px;margin-bottom:8px}
+    .wish b{display:block;color:var(--navy);margin-bottom:6px}
+    .wish p{white-space:pre-wrap;line-height:1.5;max-height:6em;overflow:hidden}
+    .wish.open p{max-height:none}
+    .wish textarea,.wish input{width:100%;margin:6px 0;padding:8px;border-radius:10px;border:1px solid #d7cbb3;font:16px Assistant,sans-serif}
+    .wish textarea{min-height:120px}
+    a.link{display:block;text-align:center;text-decoration:none;margin-top:12px;color:var(--navy)}
+    #note{text-align:center;margin-top:8px;color:#5a5346}
   </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>ניהול האלבום</h1>
-  <button class="all" id="delAll" type="button">מחיקת כל התמונות</button>
+  <h1>ניהול</h1>
+  <div class="row">
+    <a class="link navy" href="album.html" style="flex:1">אלבום</a>
+    <a class="link gold" href="wishes.html" style="flex:1">ברכות</a>
+  </div>
+  <h2>ברכות מאורחים</h2>
+  <button class="red" id="delWishes" type="button" style="width:100%">מחיקת כל הברכות</button>
+  <div id="wishes"></div>
+  <h2>תמונות וסרטונים</h2>
+  <button class="red" id="delMedia" type="button" style="width:100%;margin-bottom:8px">מחיקת כל התמונות והסרטונים</button>
   <div id="grid" class="grid"></div>
   <p id="note"></p>
-  <a href="album.html">חזרה לאלבום</a>
+  <a class="link" href="./">חזרה לאתר</a>
 </div>
 <script>
-const ALBUM_ID='LZUxwoK', HASH='zlu4GEWHMh6vEso', AUTH={Authorization:'Client-ID 546c25a59c58ad7'};
-const STORE='https://extendsclass.com/api/json-storage/bin/bacfbbe';
-const grid=document.getElementById('grid'), note=document.getElementById('note');
-let items=[];
-function parse(d){ d=String(d||''); if(d.startsWith('VID|')){ const p=d.split('|'); return {video:true,url:p.slice(2).join('|')}; } return {video:false,url:''}; }
-async function listImgur(){
-  const js=await (await fetch('https://api.imgur.com/3/album/'+ALBUM_ID+'/images?t='+Date.now(),{headers:AUTH,cache:'no-store'})).json();
-  return (js.data||[]).map(x=>{ const m=parse(x.description||x.title||''); return {id:x.id,url:m.video?(m.url||x.link):x.link,video:!!m.video}; });
-}
-async function load(){
-  try{ items=await listImgur(); }catch(e){ items=[]; }
-  grid.innerHTML=items.map(it=>'<div class="item">'+(it.video?'<video src="'+it.url+'" controls playsinline></video>':'<img src="'+it.url+'">')+'<button data-id="'+it.id+'">מחיקה</button></div>').join('')||'<p>האלבום ריק</p>';
-  grid.querySelectorAll('[data-id]').forEach(b=>b.onclick=async()=>{ note.textContent='מוחק...'; await removeId(b.dataset.id); setTimeout(load,800); });
-  note.textContent=items.length+' פריטים';
+const ALBUM='LZUxwoK', HASH='zlu4GEWHMh6vEso', AUTH='Client-ID 546c25a59c58ad7';
+const wishesBox=document.getElementById('wishes'), grid=document.getElementById('grid'), note=document.getElementById('note');
+let wishes=[], media=[];
+function parseDesc(d){
+  d=String(d||'');
+  if(d.startsWith('WISH|')){
+    const p=d.split('|');
+    let name='', text='';
+    try{ name=decodeURIComponent(p[2]||''); text=decodeURIComponent(p.slice(3).join('|')||''); }catch(e){ name=p[2]||''; text=p.slice(3).join('|'); }
+    return {type:'wish', owner:p[1]||'', name, text};
+  }
+  if(d.startsWith('VID|')){ const p=d.split('|'); return {type:'video', url:p.slice(2).join('|')}; }
+  return {type:'photo'};
 }
 async function removeId(id){
-  const r=await fetch('https://api.imgur.com/3/album/'+HASH+'/remove_images',{method:'POST', headers:AUTH, body:new URLSearchParams({ids:String(id)})});
-  return r.ok;
+  await fetch('https://api.imgur.com/3/album/'+HASH+'/remove_images',{method:'POST', headers:{Authorization:AUTH}, body:new URLSearchParams({ids:String(id)})});
 }
-document.getElementById('delAll').onclick=async()=>{
-  if(!confirm('למחוק את כל האלבום?')) return;
-  note.textContent='מוחק את הכל...';
-  try{ await fetch(STORE,{method:'PUT', headers:{'Content-Type':'text/plain'}, body:'{"items":[]}'}); }catch(e){}
-  let left=[];
-  try{ left=await listImgur(); }catch(e){ left=items.slice(); }
-  for(const it of left){
-    try{ await removeId(it.id); }catch(e){}
+function wrapLines(ctx, text, maxWidth){
+  const lines=[];
+  for(const para of String(text||'').split('\n')){
+    if(!para){ lines.push(''); continue; }
+    let line='';
+    for(const w of para.split(' ')){
+      const test=line?line+' '+w:w;
+      if(ctx.measureText(test).width>maxWidth && line){ lines.push(line); line=w; } else line=test;
+    }
+    if(line) lines.push(line);
   }
-  note.textContent='מחכה לרענון...';
-  setTimeout(load,1500);
-};
+  return lines;
+}
+function cardBlob(name,text){
+  const c=document.createElement('canvas'); const x=c.getContext('2d');
+  x.font='28px Assistant,Arial';
+  const lines=wrapLines(x,text,780);
+  c.width=900; c.height=Math.max(360,130+lines.length*38);
+  x.fillStyle='#f7f1e4'; x.fillRect(0,0,c.width,c.height);
+  x.fillStyle='#1a2744'; x.font='bold 36px Assistant,Arial'; x.textAlign='right';
+  x.fillText(name||'אורח',860,70);
+  x.fillStyle='#5a5346'; x.font='28px Assistant,Arial';
+  lines.forEach((ln,i)=>x.fillText(ln,860,130+i*38));
+  return new Promise(res=>c.toBlob(res,'image/jpeg',0.86));
+}
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function draw(){
+  wishesBox.innerHTML=wishes.map(w=>'<div class="wish" data-id="'+w.id+'">'+ 
+    '<b>'+esc(w.name||'אורח')+'</b>'+
+    (w.text?'<p>'+esc(w.text)+'</p>':(w.img?'<img src="'+w.img+'" alt="" style="width:100%;border-radius:10px">':''))+
+    '<div class="row"><button class="gold edit" data-id="'+w.id+'">עריכה</button><button class="red delw" data-id="'+w.id+'">מחיקה</button></div></div>'
+  ).join('') || '<p style="text-align:center">אין ברכות</p>';
+  grid.innerHTML=media.map(it=>'<div class="item">'+(it.video?'<video src="'+it.url+'" controls playsinline></video>':'<img src="'+it.url+'">')+'<button class="red delm" data-id="'+it.id+'">מחיקה</button></div>').join('') || '<p style="grid-column:1/-1;text-align:center">אין תמונות</p>';
+  wishesBox.querySelectorAll('.edit').forEach(b=>b.onclick=()=>editWish(b.dataset.id));
+  wishesBox.querySelectorAll('.delw').forEach(b=>b.onclick=()=>delOne(b.dataset.id));
+  grid.querySelectorAll('.delm').forEach(b=>b.onclick=()=>delOne(b.dataset.id));
+  note.textContent=wishes.length+' ברכות · '+media.length+' קבצי מדיה';
+}
+function editWish(id){
+  const w=wishes.find(x=>x.id===id); if(!w) return;
+  const box=wishesBox.querySelector('[data-id="'+id+'"]');
+  box.innerHTML='<input id="en'+id+'" value="'+esc(w.name||'')+'" /><textarea id="et'+id+'">'+esc(w.text||'')+'</textarea><div class="row"><button class="gold" id="sv'+id+'">שמירה</button><button class="navy" id="cn'+id+'">ביטול</button></div>';
+  document.getElementById('cn'+id).onclick=draw;
+  document.getElementById('sv'+id).onclick=()=>saveWish(id, w.owner);
+}
+async function saveWish(id, owner){
+  const name=document.getElementById('en'+id).value.trim();
+  const text=document.getElementById('et'+id).value.trim();
+  if(!name||!text) return;
+  note.textContent='שומר עריכה...';
+  try{
+    await removeId(id);
+    const blob=await cardBlob(name,text);
+    const fd=new FormData();
+    fd.append('image', new File([blob],'wish.jpg',{type:'image/jpeg'}));
+    fd.append('album', HASH);
+    const desc='WISH|'+(owner||'admin')+'|'+encodeURIComponent(name)+'|'+(encodeURIComponent(text).length>900?'':encodeURIComponent(text));
+    fd.append('description', desc.startsWith('WISH|')?('WISH|'+(owner||'admin')+'|'+encodeURIComponent(name)+'|'+encodeURIComponent(text)) : desc);
+    const r=await fetch('https://api.imgur.com/3/upload',{method:'POST', headers:{Authorization:AUTH}, body:fd});
+    const j=await r.json();
+    if(!j||!j.success) throw new Error('upload');
+    note.textContent='הברכה עודכנה';
+    setTimeout(load,800);
+  }catch(e){ note.textContent='העריכה נכשלה'; }
+}
+async function delOne(id){
+  if(!confirm('למחוק?')) return;
+  note.textContent='מוחק...';
+  try{ await removeId(id); }catch(e){}
+  setTimeout(load,700);
+}
+async function load(){
+  wishes=[]; media=[];
+  try{
+    const js=await (await fetch('https://api.imgur.com/3/album/'+ALBUM+'/images?t='+Date.now(),{headers:{Authorization:AUTH},cache:'no-store'})).json();
+    for(const x of (js.data||[])){
+      const m=parseDesc(x.description||x.title||'');
+      if(m.type==='wish') wishes.push({id:x.id,name:m.name,text:m.text,owner:m.owner,img:x.link});
+      else media.push({id:x.id,url:m.type==='video'?(m.url||x.link):x.link,video:m.type==='video'});
+    }
+  }catch(e){}
+  draw();
+}
+async function delList(list){
+  for(const it of list){ try{ await removeId(it.id); }catch(e){} }
+}
+document.getElementById('delWishes').onclick=async()=>{ if(!confirm('למחוק את כל הברכות?')) return; note.textContent='מוחק ברכות...'; await delList(wishes.slice()); setTimeout(load,1000); };
+document.getElementById('delMedia').onclick=async()=>{ if(!confirm('למחוק את כל התמונות והסרטונים?')) return; note.textContent='מוחק מדיה...'; await delList(media.slice()); setTimeout(load,1000); };
 load();
 </script>
 </body></html>
