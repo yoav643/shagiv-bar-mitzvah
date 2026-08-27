@@ -7,7 +7,7 @@
   <style>
     body { margin:0; font-family:Arial,sans-serif; background:#1a2744; }
     .card { max-width:440px; margin:16px auto; background:#f7f1e4; border-radius:24px; padding:16px; }
-    h1 { text-align:center; color:#1a2744; font-size:22px; }
+    h1 { text-align:center; color:#1a2744; }
     p { text-align:center; color:#5a5346; }
     video#live { width:100%; border-radius:16px; background:#000; min-height:220px; object-fit:cover; transform:scaleX(-1); }
     .row { display:flex; gap:8px; margin-top:10px; }
@@ -18,9 +18,8 @@
     .del { background:#eee; color:#7a2e2e; width:100%; margin-top:8px; }
     .back { display:block; text-align:center; text-decoration:none; background:#fff; color:#1a2744; margin-top:12px; }
     .hidden { position:absolute; opacity:0; width:1px; height:1px; }
-    #note { min-height:22px; text-align:center; font-weight:700; }
     .item { background:#fff; border-radius:12px; padding:8px; margin-top:8px; text-align:center; }
-    .item img,.item video { width:100%; max-height:240px; object-fit:cover; border-radius:8px; background:#ddd; }
+    .item img,.item video { width:100%; max-height:240px; object-fit:cover; border-radius:8px; }
   </style>
 </head>
 <body>
@@ -46,24 +45,33 @@
     const live=document.getElementById('live'), note=document.getElementById('note'), list=document.getElementById('list'), gal=document.getElementById('gal');
     let stream=null, recorder=null, chunks=[], items=[];
     function say(t){ note.textContent=t; }
+    function myHashes(){ try{return JSON.parse(localStorage.getItem('shagiv-my-hashes')||'{}');}catch(e){return{};} }
+    function saveHash(id,hash){ const h=myHashes(); if(id&&hash){ h[id]=hash; localStorage.setItem('shagiv-my-hashes', JSON.stringify(h)); } }
     function render(){
+      const mine=myHashes();
       list.innerHTML=items.map(it=>{
         const media=it.video?('<video src="'+it.url+'" controls playsinline></video>'):('<img src="'+it.url+'" alt="">');
-        return '<div class="item">'+media+'</div>';
-      }).join('') || '';
+        const del=mine[it.id]?'<button class="del" data-id="'+it.id+'">מחיקת התמונה שלי</button>':'';
+        return '<div class="item">'+media+del+'</div>';
+      }).join('');
+      list.querySelectorAll('.del').forEach(b=>b.onclick=()=>delMine(b.dataset.id));
+    }
+    async function delMine(id){
+      const hash=myHashes()[id]; if(!hash) return;
+      try{
+        await fetch('https://api.imgur.com/3/image/'+hash,{method:'DELETE', headers:{Authorization:'Client-ID 546c25a59c58ad7'}});
+        const h=myHashes(); delete h[id]; localStorage.setItem('shagiv-my-hashes', JSON.stringify(h));
+        items=items.filter(x=>x.id!==id); render(); say('נמחק מהאלבום');
+      }catch(e){ say('מחיקה נכשלה'); }
     }
     async function hostFile(file, video){
       const fd=new FormData();
       fd.append(video?'video':'image', file);
       fd.append('album','zlu4GEWHMh6vEso');
-      const r=await fetch('https://api.imgur.com/3/upload', {
-        method:'POST',
-        headers:{ 'Authorization':'Client-ID 546c25a59c58ad7' },
-        body:fd
-      });
+      const r=await fetch('https://api.imgur.com/3/upload', { method:'POST', headers:{ Authorization:'Client-ID 546c25a59c58ad7' }, body:fd });
       const j=await r.json();
       if(!j || !j.success || !j.data || !j.data.link) throw new Error((j && j.data && j.data.error) || 'העלאה נכשלה');
-      return j.data.link.replace('http://','https://');
+      return {url:j.data.link.replace('http://','https://'), id:j.data.id, hash:j.data.deletehash};
     }
     async function startCamera(){
       try{
@@ -76,8 +84,7 @@
     document.getElementById('openGal').onclick=()=>gal.click();
     document.getElementById('snap').onclick=async()=>{
       if(!live.videoWidth){ await startCamera(); if(!live.videoWidth) return; }
-      const c=document.createElement('canvas');
-      c.width=live.videoWidth; c.height=live.videoHeight;
+      const c=document.createElement('canvas'); c.width=live.videoWidth; c.height=live.videoHeight;
       const ctx=c.getContext('2d'); ctx.translate(c.width,0); ctx.scale(-1,1); ctx.drawImage(live,0,0);
       const blob=await new Promise(res=>c.toBlob(res,'image/jpeg',0.85));
       upload(blob,'selfie.jpg',false);
@@ -85,10 +92,9 @@
     document.getElementById('rec').onclick=async()=>{
       if(!stream){ await startCamera(); if(!stream) return; }
       if(recorder && recorder.state==='recording'){ recorder.stop(); return; }
-      chunks=[];
-      recorder=new MediaRecorder(stream);
+      chunks=[]; recorder=new MediaRecorder(stream);
       recorder.ondataavailable=e=>{ if(e.data && e.data.size) chunks.push(e.data); };
-      recorder.onstop=()=>{ const blob=new Blob(chunks,{type:recorder.mimeType||'video/webm'}); upload(blob,'clip.mp4',true); document.getElementById('rec').textContent='הקלט סרטון'; };
+      recorder.onstop=()=>{ upload(new Blob(chunks,{type:recorder.mimeType||'video/webm'}),'clip.mp4',true); document.getElementById('rec').textContent='הקלט סרטון'; };
       recorder.start(); document.getElementById('rec').textContent='עצור הקלטה'; say('מקליט...');
     };
     gal.onchange=()=>{ [...gal.files].forEach(f=>upload(f,f.name,(f.type||'').startsWith('video'))); };
@@ -97,10 +103,10 @@
       say('מעלה לאלבום המשותף...');
       try{
         const file=new File([blob], name, {type: blob.type || (video?'video/mp4':'image/jpeg')});
-        const url=await hostFile(file, video);
-        items.unshift({url, video:!!video});
-        render();
-        say('התמונה באלבום של כולם');
+        const up=await hostFile(file, video);
+        saveHash(up.id, up.hash);
+        items.unshift({url:up.url, video:!!video, id:up.id});
+        render(); say('התמונה באלבום. ניתן למחוק מהטלפון שהעלה.');
       }catch(e){ say('העלאה נכשלה: '+(e.message||e)); }
     }
     startCamera();
