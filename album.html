@@ -15,6 +15,7 @@
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
     .item{background:#fff;border-radius:12px;overflow:hidden}
     .item img,.item video{width:100%;height:160px;object-fit:cover;display:block;background:#ddd}
+    .open{display:block;text-align:center;font-size:13px;font-weight:800;padding:8px;color:#1a2744;text-decoration:none}
     .del{width:100%;border:0;background:#eee;color:#7a2e2e;font-weight:800;padding:8px}
     .empty{grid-column:1/-1;text-align:center;font-weight:700;padding:18px}
   </style>
@@ -39,12 +40,23 @@ function mineIds(){ try{return JSON.parse(localStorage.getItem('shagiv-mine-ids'
 const grid=document.getElementById('grid'), note=document.getElementById('note');
 let LAST=[];
 function parseDesc(d){ d=String(d||''); if(d.startsWith('VID|')){ const p=d.split('|'); return {video:true, owner:p[1]||'', url:p.slice(2).join('|')}; } return {video:false, owner:d, url:''}; }
-function canDel(it){ const ids=mineIds(); return (it.owner && owner && it.owner===owner) || ids.includes(it.id); }
+function canDel(it){ return (it.owner && owner && it.owner===owner) || mineIds().includes(it.id); }
+async function playable(url){
+  if(!url || url.indexOf('tmpfiles.org')<0) return url;
+  if(/tmpfiles\.org\/dl\/[^/]+\/[^/]+\//.test(url)) return url;
+  const view=url.replace('https://tmpfiles.org/dl/','https://tmpfiles.org/');
+  try{
+    const page=await (await fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(view))).text();
+    const m=page.match(/https:\/\/tmpfiles\.org\/dl\/[^"'\s<]+/);
+    if(m) return m[0];
+  }catch(e){}
+  return url;
+}
 function draw(list){
   LAST=list;
   if(!list.length){ grid.innerHTML='<div class="empty">עדיין אין תמונות</div>'; return; }
   grid.innerHTML=list.map(it=>{
-    const media=it.video?'<video src="'+it.url+'" controls playsinline></video>':'<a href="'+it.url+'" target="_blank" rel="noopener"><img src="'+it.url+'"></a>';
+    const media=it.video?'<video src="'+it.url+'" controls playsinline></video><a class="open" href="'+it.url+'" target="_blank" rel="noopener">פתיחת סרטון</a>':'<a href="'+it.url+'" target="_blank" rel="noopener"><img src="'+it.url+'"></a>';
     const del=canDel(it)?'<button class="del" data-id="'+it.id+'">מחיקת התמונה שלי</button>':'';
     return '<div class="item">'+media+del+'</div>';
   }).join('');
@@ -61,11 +73,14 @@ async function load(){
   try{
     const res=await fetch('https://api.imgur.com/3/album/'+ALBUM_ID+'/images?t='+Date.now(),{headers:{Authorization:AUTH},cache:'no-store'});
     const js=await res.json();
-    const list=(js.data||[]).map(x=>{
+    const list=await Promise.all((js.data||[]).map(async x=>{
       const meta=parseDesc(x.description||x.title||'');
-      return {id:x.id, url: meta.video && meta.url ? meta.url : x.link, video: meta.video || String(x.type||'').startsWith('video') || !!x.mp4, owner: meta.owner};
-    }).filter(x=>x.url);
-    draw(list);
+      let url=meta.video && meta.url ? meta.url : x.link;
+      const video=meta.video || String(x.type||'').startsWith('video') || !!x.mp4;
+      if(video) url=await playable(url);
+      return {id:x.id, url, video, owner:meta.owner};
+    }));
+    draw(list.filter(x=>x.url));
   }catch(e){ note.textContent='שגיאה בטעינה'; }
 }
 document.getElementById('dl').onclick=async()=>{
