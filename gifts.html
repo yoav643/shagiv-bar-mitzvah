@@ -29,7 +29,6 @@
     .row .name{flex:1;font-weight:800;color:var(--navy)}
     .row .meta{display:block;font-size:12px;color:#7a7366;font-weight:600}
     .row .amt{width:92px;direction:ltr;text-align:left;font-weight:700}
-    .row .desc{margin-top:8px}
     .del{border:0;background:#f3e8e8;color:#7a2e2e;border-radius:10px;padding:8px 10px;font-weight:800;margin-top:8px}
     a.btn{display:block;text-align:center;text-decoration:none;border-radius:12px;padding:12px 8px;font-weight:800;background:var(--navy);color:#f3e7b8;margin-bottom:8px}
     #note{text-align:center;color:#5a5346;font-size:13px;margin-top:8px}
@@ -72,7 +71,8 @@ const note=document.getElementById('note');
 let filterMode='all';
 let data={gifts:{}, extras:[]};
 let cashIds={};
-function keyOf(g){ return (g.name||'')+'|'+(g.table||''); }
+let listIds=[];
+function keyOf(g){ return String(g.name||'')+'|'+String(g.table||''); }
 function num(v){ const n=Number(String(v==null?'':v).replace(/[^0-9.]/g,'')); return isFinite(n)&&n>0?n:0; }
 function enc(s){ return encodeURIComponent(s||''); }
 function dec(s){ try{ return decodeURIComponent(s||''); }catch(e){ return s||''; } }
@@ -83,10 +83,9 @@ function rec(k){
 }
 function setRec(k, patch){
   const next=Object.assign({}, rec(k), patch);
-  if(!next.amount && !next.desc) delete data.gifts[k];
-  else data.gifts[k]=next;
+  data.gifts[k]=next;
 }
-function saveLocal(){ localStorage.setItem(LS, JSON.stringify({gifts:data.gifts, extras:data.extras, cashIds})); }
+function saveLocal(){ localStorage.setItem(LS, JSON.stringify({gifts:data.gifts, extras:data.extras, cashIds, listIds})); }
 function allGuests(){
   const base=(typeof GUESTS==='undefined'?[]:GUESTS).map(g=>({name:g.name,table:String(g.table||''),guests:g.guests||1,extra:false}));
   return base.concat((data.extras||[]).map(g=>({name:g.name,table:String(g.table||''),guests:g.guests||1,extra:true})));
@@ -100,14 +99,7 @@ function tinyBlob(){
   const x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,8,8);
   return new Promise(res=>c.toBlob(res,'image/jpeg',0.4));
 }
-async function uploadCash(k, extra){
-  const r=rec(k);
-  const [name,table]=k.split('|');
-  const prefix=extra?'CASHX|':'CASH|';
-  const desc=prefix+enc(name)+'|'+enc(table)+'|'+r.amount+'|'+enc(r.desc||'');
-  const old=cashIds[k]||[];
-  for(const id of old) await removeId(id);
-  cashIds[k]=[];
+async function uploadDesc(desc){
   const blob=await tinyBlob();
   const fd=new FormData();
   fd.append('image', new File([blob],'cash.jpg',{type:'image/jpeg'}));
@@ -115,17 +107,31 @@ async function uploadCash(k, extra){
   fd.append('description', desc);
   const js=await (await fetch('https://api.imgur.com/3/upload',{method:'POST', headers:{Authorization:AUTH}, body:fd})).json();
   if(!js||!js.success||!js.data||!js.data.id) throw new Error('save');
-  cashIds[k]=[js.data.id];
+  return js.data.id;
 }
 async function persistKey(k, extra){
   saveLocal();
-  totals();
+  const r=rec(k);
+  const parts=k.split('|');
+  const name=parts[0]||'', table=parts.slice(1).join('|');
+  const prefix=extra?'CASHX|':'CASH|';
   note.textContent='שומר בשרת...';
   try{
-    await uploadCash(k, extra);
+    for(const id of (cashIds[k]||[])) await removeId(id);
+    cashIds[k]=[await uploadDesc(prefix+enc(name)+'|'+enc(table)+'|'+r.amount+'|'+enc(r.desc||''))];
     saveLocal();
     note.textContent='נשמר בשרת';
-  }catch(e){ note.textContent='נשמר רק במכשיר — השרת נכשל'; }
+  }catch(e){ note.textContent='נשמר רק במכשיר'; }
+}
+async function persistExtras(){
+  saveLocal();
+  note.textContent='שומר שמות בשרת...';
+  try{
+    for(const id of listIds) await removeId(id);
+    listIds=[await uploadDesc('CASHL|'+enc(JSON.stringify(data.extras||[])))];
+    saveLocal();
+    note.textContent='נשמר בשרת';
+  }catch(e){ note.textContent='השם נשמר רק במכשיר'; }
 }
 function totals(){
   const people=allGuests();
@@ -178,7 +184,7 @@ function draw(){
       delete data.gifts[k];
       for(const id of (cashIds[k]||[])) await removeId(id);
       delete cashIds[k];
-      saveLocal(); draw();
+      await persistExtras(); draw();
     };
   });
   totals();
@@ -186,13 +192,21 @@ function draw(){
 async function loadServer(){
   try{
     const raw=JSON.parse(localStorage.getItem(LS)||'null');
-    if(raw&&raw.gifts){ data.gifts=raw.gifts||{}; data.extras=raw.extras||[]; cashIds=raw.cashIds||{}; }
+    if(raw){ data.gifts=raw.gifts||{}; data.extras=raw.extras||[]; cashIds=raw.cashIds||{}; listIds=raw.listIds||[]; }
   }catch(e){}
   try{
     const js=await (await fetch('https://api.imgur.com/3/album/'+ALBUM+'/images?t='+Date.now(),{headers:{Authorization:AUTH},cache:'no-store'})).json();
-    const gifts={}, extras=[], ids={};
+    const gifts={}, extras=[], ids={}; const lists=[];
     for(const x of (js.data||[])){
       const d=String(x.description||x.title||'');
+      if(d.startsWith('CASHL|')){
+        lists.push(x.id);
+        try{
+          const arr=JSON.parse(dec(d.slice(6)));
+          if(Array.isArray(arr)) extras.push.apply(extras, arr);
+        }catch(e){}
+        continue;
+      }
       if(!d.startsWith('CASH|') && !d.startsWith('CASHX|')) continue;
       const extra=d.startsWith('CASHX|');
       const p=d.split('|');
@@ -200,18 +214,22 @@ async function loadServer(){
       const k=name+'|'+table;
       gifts[k]={amount, desc};
       ids[k]=(ids[k]||[]).concat([x.id]);
-      if(extra && !extras.some(g=>g.name===name && String(g.table)===String(table))) extras.push({name, table, guests:1});
+      if(extra) extras.push({name, table, guests:1});
     }
     data.gifts=Object.assign({}, data.gifts, gifts);
     const seen=new Set((data.extras||[]).map(keyOf));
-    for(const g of extras){ if(!seen.has(keyOf(g))) data.extras.push(g); }
+    for(const g of extras){
+      const item={name:g.name, table:String(g.table||''), guests:g.guests||1};
+      if(item.name && !seen.has(keyOf(item))){ data.extras.push(item); seen.add(keyOf(item)); }
+    }
     cashIds=Object.assign({}, cashIds, ids);
+    if(lists.length) listIds=lists;
     saveLocal();
     note.textContent='נטען מהשרת';
   }catch(e){ note.textContent='נטען מהמכשיר'; }
   draw();
 }
-document.getElementById('addBtn').onclick=()=>{
+document.getElementById('addBtn').onclick=async()=>{
   const name=document.getElementById('newName').value.trim();
   const desc=document.getElementById('newDesc').value.trim();
   const table=document.getElementById('newTable').value.trim();
@@ -221,7 +239,11 @@ document.getElementById('addBtn').onclick=()=>{
   data.extras.push({name, table, guests:1});
   if(desc) setRec(name+'|'+table,{desc});
   document.getElementById('newName').value='';
-  persistKey(name+'|'+table, true); draw();
+  document.getElementById('addBtn').disabled=true;
+  draw();
+  await persistExtras();
+  await persistKey(name+'|'+table, true);
+  document.getElementById('addBtn').disabled=false;
 };
 document.getElementById('q').oninput=draw;
 document.getElementById('allBtn').onclick=()=>setFilter('all');
