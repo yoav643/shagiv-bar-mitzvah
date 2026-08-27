@@ -49,7 +49,7 @@
     <label for="name">השם שלכם</label>
     <input id="name" required maxlength="40" placeholder="שם מלא" />
     <label for="text">הברכה</label>
-    <textarea id="text" required maxlength="600" placeholder="מזל טוב שגיב..."></textarea>
+    <textarea id="text" required maxlength="500" placeholder="מזל טוב שגיב..."></textarea>
     <div class="row" style="margin:12px 0 0">
       <button class="btn gold" type="submit" id="save">שמירת ברכה</button>
     </div>
@@ -58,14 +58,36 @@
   <p id="note"></p>
 </div>
 <script>
-const STORE='https://extendsclass.com/api/json-storage/bin/beecddc';
+const AUTH='Client-ID 546c25a59c58ad7', HASH='zlu4GEWHMh6vEso', ALBUM='LZUxwoK';
 let owner=localStorage.getItem('shagiv-owner');
 if(!owner){ owner='u'+Math.random().toString(36).slice(2,10); localStorage.setItem('shagiv-owner', owner); }
 let editId=null, ALL=[];
 const list=document.getElementById('list'), note=document.getElementById('note');
 const nameEl=document.getElementById('name'), textEl=document.getElementById('text'), save=document.getElementById('save');
-async function readStore(){ try{ return await (await fetch(STORE+'?t='+Date.now(),{cache:'no-store'})).json(); }catch(e){ return {wishes:[]}; } }
-async function writeStore(data){ await fetch(STORE,{method:'PUT', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(data)}); }
+function parseWish(d){
+  const s=String(d||'');
+  if(!s.startsWith('WISH|')) return null;
+  const p=s.split('|');
+  return {owner:p[1]||'', name:decodeURIComponent(p[2]||''), text:decodeURIComponent(p.slice(3).join('|')||'')};
+}
+function descOf(name,text){ return 'WISH|'+owner+'|'+encodeURIComponent(name)+'|'+encodeURIComponent(text); }
+function cardBlob(name,text){
+  const c=document.createElement('canvas'); c.width=900; c.height=500;
+  const x=c.getContext('2d');
+  x.fillStyle='#f7f1e4'; x.fillRect(0,0,900,500);
+  x.fillStyle='#1a2744'; x.font='bold 36px Assistant,Arial'; x.textAlign='right';
+  x.fillText(name||'אורח', 860, 70);
+  x.fillStyle='#5a5346'; x.font='28px Assistant,Arial';
+  const words=(text||'').split(' '); let line='', y=130;
+  for(const w of words){
+    const test=line?line+' '+w:w;
+    if(x.measureText(test).width>780){ x.fillText(line,860,y); line=w; y+=40; if(y>450) break; }
+    else line=test;
+  }
+  if(line) x.fillText(line,860,y);
+  return new Promise(res=>c.toBlob(res,'image/jpeg',0.85));
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
 function draw(){
   if(!ALL.length){ list.innerHTML='<p style="text-align:center;color:#5a5346;font-weight:700">עדיין אין ברכות מאורחים</p>'; return; }
   list.innerHTML=ALL.map(w=>{
@@ -76,7 +98,6 @@ function draw(){
   list.querySelectorAll('.edit').forEach(b=>b.onclick=()=>startEdit(b.dataset.id));
   list.querySelectorAll('.del').forEach(b=>b.onclick=()=>delWish(b.dataset.id));
 }
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
 function startEdit(id){
   const w=ALL.find(x=>x.id===id && x.owner===owner); if(!w) return;
   editId=id; nameEl.value=w.name||''; textEl.value=w.text||''; save.textContent='עדכון ברכה'; nameEl.focus();
@@ -84,13 +105,19 @@ function startEdit(id){
 async function delWish(id){
   const w=ALL.find(x=>x.id===id); if(!w||w.owner!==owner) return;
   if(!confirm('למחוק את הברכה שלכם?')) return;
-  const data=await readStore();
-  data.wishes=(data.wishes||[]).filter(x=>x.id!==id);
-  await writeStore(data); load();
+  try{ await fetch('https://api.imgur.com/3/album/'+HASH+'/remove_images',{method:'POST', headers:{Authorization:AUTH}, body:new URLSearchParams({ids:id})}); }catch(e){}
+  setTimeout(load,700);
 }
 async function load(){
-  const data=await readStore();
-  ALL=(data.wishes||[]).slice().sort((a,b)=>(b.ts||0)-(a.ts||0));
+  ALL=[];
+  try{
+    const js=await (await fetch('https://api.imgur.com/3/album/'+ALBUM+'/images?t='+Date.now(),{headers:{Authorization:AUTH},cache:'no-store'})).json();
+    for(const x of (js.data||[])){
+      const w=parseWish(x.description||x.title||'');
+      if(!w) continue;
+      ALL.push({id:x.id, owner:w.owner, name:w.name, text:w.text});
+    }
+  }catch(e){}
   draw();
 }
 document.getElementById('form').onsubmit=async e=>{
@@ -99,16 +126,20 @@ document.getElementById('form').onsubmit=async e=>{
   if(!name||!text) return;
   note.textContent='שומר...';
   try{
-    const data=await readStore();
-    data.wishes=data.wishes||[];
     if(editId){
-      data.wishes=data.wishes.map(w=> w.id===editId && w.owner===owner ? Object.assign({},w,{name,text}) : w);
+      try{ await fetch('https://api.imgur.com/3/album/'+HASH+'/remove_images',{method:'POST', headers:{Authorization:AUTH}, body:new URLSearchParams({ids:editId})}); }catch(e){}
       editId=null; save.textContent='שמירת ברכה';
-    } else {
-      data.wishes.unshift({id:'w'+Date.now(), owner, name, text, ts:Date.now()});
     }
-    await writeStore(data);
-    textEl.value=''; load(); note.textContent='הברכה נשמרה';
+    const blob=await cardBlob(name,text);
+    const fd=new FormData();
+    fd.append('image', new File([blob],'wish.jpg',{type:'image/jpeg'}));
+    fd.append('album', HASH);
+    fd.append('description', descOf(name,text));
+    const r=await fetch('https://api.imgur.com/3/upload',{method:'POST', headers:{Authorization:AUTH}, body:fd});
+    const j=await r.json();
+    if(!j||!j.success) throw new Error('upload');
+    textEl.value=''; note.textContent='הברכה נשמרה';
+    setTimeout(load,800);
   }catch(err){ note.textContent='לא הצלחנו לשמור. נסו שוב.'; }
 };
 load();
