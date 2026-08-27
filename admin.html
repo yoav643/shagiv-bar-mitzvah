@@ -10,7 +10,7 @@
     h1,p{text-align:center}h1{color:#1a2744}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
     .item{background:#fff;border-radius:12px;overflow:hidden}
-    .item img,.item video{width:100%;height:150px;object-fit:cover;display:block;background:#ddd}
+    .item img,.item video{width:100%;height:150px;object-fit:cover;display:block;background:#000}
     button{width:100%;border:0;padding:10px;font-weight:800;background:#7a2e2e;color:#fff}
     .all{margin:10px 0;background:#1a2744;color:#f3e7b8;border-radius:12px;padding:14px}
     a{display:block;text-align:center;margin-top:12px;color:#1a2744;font-weight:800}
@@ -19,7 +19,6 @@
 <body>
 <div class="wrap">
   <h1>ניהול האלבום</h1>
-  <p>דף פרטי</p>
   <button class="all" id="delAll" type="button">מחיקת כל התמונות</button>
   <div id="grid" class="grid"></div>
   <p id="note"></p>
@@ -27,28 +26,39 @@
 </div>
 <script>
 const ALBUM_ID='LZUxwoK', HASH='zlu4GEWHMh6vEso', AUTH={Authorization:'Client-ID 546c25a59c58ad7'};
+const STORE='https://extendsclass.com/api/json-storage/bin/bacfbbe';
 const grid=document.getElementById('grid'), note=document.getElementById('note');
 let items=[];
 function parse(d){ d=String(d||''); if(d.startsWith('VID|')){ const p=d.split('|'); return {video:true,url:p.slice(2).join('|')}; } return {video:false,url:''}; }
-async function removeId(id){
-  const r=await fetch('https://api.imgur.com/3/album/'+HASH+'/remove_images',{method:'POST', headers:AUTH, body:new URLSearchParams({ids:id})});
-  return r.ok;
-}
 async function load(){
-  const res=await fetch('https://api.imgur.com/3/album/'+ALBUM_ID+'/images?t='+Date.now(),{headers:AUTH,cache:'no-store'});
-  const data=await res.json();
-  items=(data.data||[]).map(x=>{ const m=parse(x.description||x.title||''); return {id:x.id,url:m.url||x.link,video:m.video||String(x.type||'').startsWith('video')}; });
+  const map=new Map();
+  try{
+    const js=await (await fetch('https://api.imgur.com/3/album/'+ALBUM_ID+'/images?t='+Date.now(),{headers:AUTH,cache:'no-store'})).json();
+    (js.data||[]).forEach(x=>{ const m=parse(x.description||x.title||''); map.set(x.id,{id:x.id,url:m.video?(m.url||x.link):x.link,video:!!(m.video||String(x.type||'').startsWith('video'))}); });
+  }catch(e){}
+  try{
+    const st=await (await fetch(STORE+'?t='+Date.now(),{cache:'no-store'})).json();
+    (st.items||[]).forEach(x=>{ if(x&&x.id&&x.url) map.set(x.id,{id:x.id,url:x.url,video:!!x.video}); });
+  }catch(e){}
+  items=[...map.values()];
   if(!items.length){ grid.innerHTML='<p>האלבום ריק</p>'; note.textContent=''; return; }
   grid.innerHTML=items.map(it=>'<div class="item">'+(it.video?'<video src="'+it.url+'" controls playsinline></video>':'<img src="'+it.url+'">')+'<button data-id="'+it.id+'">מחיקה</button></div>').join('');
-  grid.querySelectorAll('button').forEach(b=>b.onclick=async()=>{ note.textContent='מוחק...'; await removeId(b.dataset.id); setTimeout(load,700); });
-  note.textContent=items.length+' תמונות';
+  grid.querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>delOne(b.dataset.id));
+  note.textContent=items.length+' פריטים';
+}
+async function delOne(id){
+  try{ await fetch('https://api.imgur.com/3/album/'+HASH+'/remove_images',{method:'POST', headers:AUTH, body:new URLSearchParams({ids:id})}); }catch(e){}
+  try{
+    const st=await (await fetch(STORE+'?t='+Date.now(),{cache:'no-store'})).json();
+    st.items=(st.items||[]).filter(x=>x.id!==id);
+    await fetch(STORE,{method:'PUT', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(st)});
+  }catch(e){}
+  load();
 }
 document.getElementById('delAll').onclick=async()=>{
-  if(!items.length){ note.textContent='אין מה למחוק'; return; }
-  if(!confirm('למחוק את כל האלבום?')) return;
-  note.textContent='מוחק את הכל...';
-  for(const it of items){ try{ await removeId(it.id); }catch(e){} }
-  setTimeout(load,1000);
+  if(!confirm('למחוק את הכל?')) return;
+  note.textContent='מוחק...';
+  for(const it of items){ try{ await delOne(it.id); }catch(e){} }
 };
 load();
 </script>
