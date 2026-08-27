@@ -36,19 +36,17 @@
   <p id="note"></p>
 </div>
 <script>
+const ALBUM_ID='LZUxwoK', HASH='zlu4GEWHMh6vEso', AUTH='Client-ID 546c25a59c58ad7';
 const STORE='https://extendsclass.com/api/json-storage/bin/bacfbbe';
-const HASH='zlu4GEWHMh6vEso', AUTH='Client-ID 546c25a59c58ad7';
-const q=new URLSearchParams(location.search);
-let owner=q.get('me')||localStorage.getItem('shagiv-owner')||'';
-if(q.get('me')) localStorage.setItem('shagiv-owner', q.get('me'));
+let owner=localStorage.getItem('shagiv-owner')||'';
 let onlyMine=false, ALL=[];
 function mineIds(){ try{return JSON.parse(localStorage.getItem('shagiv-mine-ids')||'[]');}catch(e){return[];} }
+function parseDesc(d){ d=String(d||''); if(d.startsWith('VID|')){ const p=d.split('|'); return {video:true,owner:p[1]||'',url:p.slice(2).join('|')}; } return {video:false,owner:d,url:''}; }
+function isMine(it){ return (it.owner&&owner&&it.owner===owner)||mineIds().includes(it.id); }
 const grid=document.getElementById('grid'), note=document.getElementById('note'), mineBtn=document.getElementById('mineBtn');
-function isMine(it){ return (it.owner&&owner&&it.owner===owner) || mineIds().includes(it.id); }
-function shown(){ return onlyMine?ALL.filter(isMine):ALL; }
 function draw(){
-  const list=shown();
-  if(!list.length){ grid.innerHTML='<div class="empty">'+(onlyMine?'אין פריטים שלכם כאן':'עדיין אין תמונות')+'</div>'; note.textContent=''; return; }
+  const list=onlyMine?ALL.filter(isMine):ALL;
+  if(!list.length){ grid.innerHTML='<div class="empty">עדיין אין תמונות</div>'; note.textContent=''; return; }
   grid.innerHTML=list.map(it=>{
     const media=it.video?('<video src="'+it.url+'" controls playsinline></video><a class="open" href="'+it.url+'" target="_blank" rel="noopener">פתיחת סרטון</a>'):('<a href="'+it.url+'" target="_blank" rel="noopener"><img src="'+it.url+'"></a>');
     const del=isMine(it)?'<button class="del" data-id="'+it.id+'">מחיקת התמונה שלי</button>':'';
@@ -57,19 +55,32 @@ function draw(){
   grid.querySelectorAll('.del').forEach(b=>b.onclick=()=>delOne(b.dataset.id));
   note.textContent=list.length+' פריטים';
 }
-async function readStore(){ try{ return await (await fetch(STORE+'?t='+Date.now(),{cache:'no-store'})).json(); }catch(e){ return {}; } }
-async function writeStore(data){ await fetch(STORE,{method:'PUT', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(data)}); }
 async function load(){
-  const data=await readStore();
-  ALL=(data.items||[]).filter(x=>x&&x.url);
+  const map=new Map();
+  try{
+    const res=await fetch('https://api.imgur.com/3/album/'+ALBUM_ID+'/images?t='+Date.now(),{headers:{Authorization:AUTH},cache:'no-store'});
+    const js=await res.json();
+    (js.data||[]).forEach(x=>{
+      const meta=parseDesc(x.description||x.title||'');
+      const video=!!(meta.video||String(x.type||'').startsWith('video')||x.mp4);
+      map.set(x.id,{id:x.id,url:video?(meta.url||x.mp4||x.link):x.link,video,owner:meta.owner});
+    });
+  }catch(e){}
+  try{
+    const st=await (await fetch(STORE+'?t='+Date.now(),{cache:'no-store'})).json();
+    (st.items||[]).forEach(x=>{ if(x&&x.id&&x.url&&!map.has(x.id)) map.set(x.id,x); });
+  }catch(e){}
+  ALL=[...map.values()];
   draw();
 }
 async function delOne(id){
   if(!confirm('למחוק?')) return;
-  const data=await readStore();
-  data.items=(data.items||[]).filter(x=>x.id!==id);
-  await writeStore(data);
   try{ await fetch('https://api.imgur.com/3/album/'+HASH+'/remove_images',{method:'POST', headers:{Authorization:AUTH}, body:new URLSearchParams({ids:id})}); }catch(e){}
+  try{
+    const st=await (await fetch(STORE+'?t='+Date.now(),{cache:'no-store'})).json();
+    st.items=(st.items||[]).filter(x=>x.id!==id);
+    await fetch(STORE,{method:'PUT', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(st)});
+  }catch(e){}
   load();
 }
 async function zipOf(list,name){
@@ -82,6 +93,6 @@ async function zipOf(list,name){
 mineBtn.onclick=()=>{ onlyMine=!onlyMine; mineBtn.textContent=onlyMine?'הצג את הכל':'הצג רק מה שצילמתי'; draw(); };
 document.getElementById('dlMine').onclick=()=>zipOf(ALL.filter(isMine),'shagiv-mine.zip');
 document.getElementById('dl').onclick=()=>zipOf(ALL,'album-shagiv.zip');
-load(); setInterval(load,5000);
+load(); setInterval(load,7000);
 </script>
 </body></html>

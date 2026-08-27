@@ -52,36 +52,36 @@ function render(){
   list.innerHTML=items.map(it=>'<div class="item">'+(it.video?'<video src="'+it.url+'" controls playsinline></video>':'<img src="'+it.url+'">')+'<button class="del" data-id="'+it.id+'">מחיקת התמונה שלי</button></div>').join('');
   list.querySelectorAll('.del').forEach(b=>b.onclick=()=>delMine(b.dataset.id));
 }
-async function readStore(){ try{ return await (await fetch(STORE+'?t='+Date.now(),{cache:'no-store'})).json(); }catch(e){ return {items:[]}; } }
-async function writeStore(data){ await fetch(STORE,{method:'PUT', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(data)}); }
 async function publish(entry){
-  const data=await readStore();
-  data.items=data.items||[];
-  data.items=data.items.filter(x=>x&&x.id!==entry.id);
-  data.items.unshift(entry);
-  await writeStore(data);
+  try{
+    const data=await (await fetch(STORE+'?t='+Date.now(),{cache:'no-store'})).json();
+    data.items=data.items||[];
+    data.items=data.items.filter(x=>x&&x.id!==entry.id);
+    data.items.unshift(entry);
+    await fetch(STORE,{method:'PUT', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(data)});
+  }catch(e){}
 }
 async function delMine(id){
-  const data=await readStore();
-  data.items=(data.items||[]).filter(x=>x.id!==id);
-  await writeStore(data);
   try{ await fetch('https://api.imgur.com/3/album/'+HASH+'/remove_images',{method:'POST', headers:{Authorization:AUTH}, body:new URLSearchParams({ids:id})}); }catch(e){}
-  items=items.filter(x=>x.id!==id); localStorage.setItem('shagiv-mine-ids', JSON.stringify(mineIds().filter(x=>x!==id))); saveItems(); render();
+  items=items.filter(x=>x.id!==id); saveItems(); render();
 }
-async function imgurImage(file, desc){
-  const fd=new FormData(); fd.append('image', file); fd.append('album', HASH); fd.append('description', desc);
+async function imgurUpload(file, video, desc){
+  const fd=new FormData();
+  fd.append(video?'video':'image', file);
+  fd.append('album', HASH);
+  fd.append('description', desc);
   const r=await fetch('https://api.imgur.com/3/upload',{method:'POST', headers:{Authorization:AUTH}, body:fd});
   const j=await r.json();
   if(!j||!j.success||!j.data||!j.data.id) throw new Error((j&&j.data&&j.data.error)||'העלאה נכשלה');
   return j.data;
 }
-async function hostVideo(file){
+async function tmpVideo(file){
   const fd=new FormData(); fd.append('file', file);
   const r=await fetch('https://tmpfiles.org/api/v1/upload',{method:'POST', body:fd});
   const j=await r.json();
-  const view=j && j.data && j.data.url;
-  if(!view) throw new Error('סרטון לא נשמר');
-  return String(view).replace('http://','https://');
+  const url=j&&j.data&&j.data.url;
+  if(!url) throw new Error('סרטון לא נשמר');
+  return String(url).replace('http://','https://');
 }
 async function startCamera(){
   try{
@@ -103,28 +103,36 @@ document.getElementById('snap').onclick=async()=>{
 document.getElementById('rec').onclick=async()=>{
   if(!stream){ await startCamera(); if(!stream) return; }
   if(recorder && recorder.state==='recording'){ recorder.stop(); return; }
-  chunks=[]; recorder=new MediaRecorder(stream);
+  chunks=[];
+  const mime=['video/mp4','video/webm'].find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t))||'';
+  recorder=mime?new MediaRecorder(stream,{mimeType:mime}):new MediaRecorder(stream);
   recorder.ondataavailable=e=>{ if(e.data&&e.data.size) chunks.push(e.data); };
-  recorder.onstop=()=>{ upload(new Blob(chunks,{type:recorder.mimeType||'video/webm'}),'clip.webm', true); document.getElementById('rec').textContent='הקלט סרטון'; };
+  recorder.onstop=()=>{ const type=recorder.mimeType||'video/webm'; upload(new Blob(chunks,{type}), type.includes('mp4')?'clip.mp4':'clip.webm', true); document.getElementById('rec').textContent='הקלט סרטון'; };
   recorder.start(); document.getElementById('rec').textContent='עצור הקלטה'; say('מקליט...');
 };
 gal.onchange=()=>{ [...gal.files].forEach(f=>upload(f,f.name,(f.type||'').startsWith('video'))); };
 async function upload(blob,name,video){
   if(!blob||!blob.size) return;
   say(video?'מעלה סרטון...':'מעלה תמונה...');
+  const file=new File([blob],name,{type:blob.type||(video?'video/webm':'image/jpeg')});
   try{
     let entry;
     if(video){
-      const url=await hostVideo(new File([blob],name,{type:blob.type||'video/webm'}));
-      const id='v'+Date.now();
-      entry={id,url,video:true,owner};
+      try{
+        const data=await imgurUpload(file,true,owner);
+        entry={id:data.id,url:(data.mp4||data.link),video:true,owner};
+      }catch(e){
+        const url=await tmpVideo(file);
+        const mark=await imgurUpload(new File([await (await fetch('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==')).blob()],'m.png',{type:'image/png'}), false, 'VID|'+owner+'|'+url);
+        entry={id:mark.id,url,video:true,owner};
+      }
     } else {
-      const data=await imgurImage(new File([blob],name,{type:blob.type||'image/jpeg'}), owner);
+      const data=await imgurUpload(file,false,owner);
       entry={id:data.id,url:data.link,video:false,owner};
     }
-    await publish(entry);
     addMine(entry.id); items.unshift(entry); saveItems(); render();
-    say('נשמר באלבום המשותף');
+    publish(entry);
+    say('נשמר. ראו באלבום המשותף');
   }catch(e){ say('העלאה נכשלה: '+(e.message||e)); }
 }
 render(); startCamera();
