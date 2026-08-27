@@ -18,6 +18,7 @@
     .item { background:#fff; border-radius:12px; overflow:hidden; }
     .item img, .item video { width:100%; height:160px; object-fit:cover; display:block; background:#ddd; }
     .empty { text-align:center; padding:24px 8px; font-weight:700; grid-column:1/-1; }
+    .del { width:100%; border:0; background:#eee; color:#7a2e2e; font-weight:800; padding:8px; }
   </style>
 </head>
 <body>
@@ -40,58 +41,51 @@
     const grid=document.getElementById('grid');
     const note=document.getElementById('note');
     const dl=document.getElementById('dl');
+    function myHashes(){ try{return JSON.parse(localStorage.getItem('shagiv-my-hashes')||'{}');}catch(e){return{};} }
     let LAST=[];
     function draw(list){
       LAST=list||[];
       if(!LAST.length){ grid.innerHTML='<div class="empty">עדיין אין תמונות. היו הראשונים להעלות.</div>'; note.textContent=''; return; }
-      grid.innerHTML=LAST.map(it=> it.video
-        ? '<div class="item"><video src="'+it.url+'" controls playsinline></video></div>'
-        : '<div class="item"><a href="'+it.url+'" target="_blank" rel="noopener"><img src="'+it.url+'" alt=""></a></div>'
-      ).join('');
+      const mine=myHashes();
+      grid.innerHTML=LAST.map(it=>{
+        const media=it.video ? '<video src="'+it.url+'" controls playsinline></video>' : '<a href="'+it.url+'" target="_blank" rel="noopener"><img src="'+it.url+'" alt=""></a>';
+        const del=mine[it.id]?'<button class="del" data-id="'+it.id+'">מחיקת התמונה שלי</button>':'';
+        return '<div class="item">'+media+del+'</div>';
+      }).join('');
+      grid.querySelectorAll('.del').forEach(b=>b.onclick=()=>delMine(b.dataset.id));
       note.textContent=LAST.length+' פריטים באלבום';
+    }
+    async function delMine(id){
+      const hash=myHashes()[id]; if(!hash){ note.textContent='אפשר למחוק רק מאותו טלפון שהעלה'; return; }
+      try{
+        await fetch('https://api.imgur.com/3/image/'+hash,{method:'DELETE', headers:{Authorization:CLIENT}});
+        const h=myHashes(); delete h[id]; localStorage.setItem('shagiv-my-hashes', JSON.stringify(h));
+        note.textContent='נמחק'; load();
+      }catch(e){ note.textContent='מחיקה נכשלה'; }
     }
     async function load(){
       try{
-        const res=await fetch('https://api.imgur.com/3/album/'+ALBUM_ID+'/images?t='+Date.now(), {
-          headers:{ Authorization: CLIENT }, cache:'no-store'
-        });
+        const res=await fetch('https://api.imgur.com/3/album/'+ALBUM_ID+'/images?t='+Date.now(), { headers:{ Authorization: CLIENT }, cache:'no-store' });
         const data=await res.json();
-        const imgs=(data.data||[]).map(x=>({
-          id:x.id,
-          url:x.link,
-          video: String(x.type||'').startsWith('video') || !!x.mp4
-        })).filter(x=>x.url);
+        const imgs=(data.data||[]).map(x=>({ id:x.id, url:x.link, video: String(x.type||'').startsWith('video') || !!x.mp4 })).filter(x=>x.url);
         draw(imgs);
-      }catch(e){
-        note.textContent='לא הצלחנו לטעון את האלבום. רעננו.';
-      }
+      }catch(e){ note.textContent='לא הצלחנו לטעון את האלבום. רעננו.'; }
     }
-    function saveBlob(blob, name){
-      const a=document.createElement('a');
-      a.href=URL.createObjectURL(blob);
-      a.download=name;
-      document.body.appendChild(a); a.click(); a.remove();
-    }
+    function saveBlob(blob, name){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); }
     dl.onclick=async()=>{
       if(!LAST.length){ note.textContent='אין קבצים להורדה'; return; }
       dl.disabled=true; dl.textContent='מכין הורדה...';
       try{
         const zip=new JSZip(); let ok=0;
         for(let i=0;i<LAST.length;i++){
-          try{
-            const res=await fetch(LAST[i].url);
-            const blob=await res.blob();
-            const ext=LAST[i].video?'mp4':(blob.type.includes('png')?'png':'jpg');
-            zip.file('shagiv-'+(i+1)+'.'+ext, blob); ok++;
-          }catch(e){}
+          try{ const res=await fetch(LAST[i].url); const blob=await res.blob(); const ext=LAST[i].video?'mp4':(blob.type.includes('png')?'png':'jpg'); zip.file('shagiv-'+(i+1)+'.'+ext, blob); ok++; }catch(e){}
         }
         if(ok){ saveBlob(await zip.generateAsync({type:'blob'}), 'album-shagiv.zip'); note.textContent='הורדו '+ok+' קבצים'; }
         else note.textContent='לא הצלחנו לארוז. נסו שוב.';
       }catch(e){ note.textContent='שגיאה בהורדה'; }
       dl.disabled=false; dl.textContent='הורדת הכל למחשב';
     };
-    load();
-    setInterval(load, 8000);
+    load(); setInterval(load, 8000);
   </script>
 </body>
 </html>
