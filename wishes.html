@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#1a2744" />
+  <title>ברכות מהאורחים · שגיב</title>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Frank+Ruhl+Libre:wght@700;900&display=swap" rel="stylesheet" />
+  <style>
+    :root{--navy:#1a2744;--gold:#c9a227;--cream:#f7f1e4}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{min-height:100vh;background:radial-gradient(ellipse at top,#2c3d62,#1a2744 55%,#10182a);font-family:Assistant,Tahoma,sans-serif;display:flex;justify-content:center;padding:16px 12px 32px}
+    .phone{width:100%;max-width:440px;background:var(--cream);border-radius:28px;overflow:hidden;box-shadow:0 0 0 8px var(--navy),0 24px 60px rgba(0,0,0,.45)}
+    .top{text-align:center;padding:22px 18px 10px}
+    .badge{width:56px;height:56px;margin:0 auto 8px;border-radius:50%;background:var(--navy);color:#f3e7b8;display:flex;align-items:center;justify-content:center;font-family:"Frank Ruhl Libre",serif;font-weight:900;font-size:24px;border:3px solid #e8d48b}
+    h1{font-family:"Frank Ruhl Libre",serif;color:var(--navy);font-size:24px}
+    .sub{color:#5a5346;margin-top:4px}
+    .row{display:flex;gap:8px;margin:10px 16px}
+    a.btn,button.btn{flex:1;border:0;border-radius:14px;padding:12px 8px;font:800 14px Assistant,sans-serif;text-align:center;text-decoration:none}
+    .navy{background:var(--navy);color:#f3e7b8}
+    .gold{background:var(--gold);color:var(--navy)}
+    form{margin:8px 16px 16px;background:#fff;border-radius:18px;padding:14px;border:1px solid rgba(201,162,39,.3)}
+    label{display:block;font-weight:800;color:var(--navy);margin:8px 0 4px;font-size:13px}
+    input,textarea{width:100%;border:1.5px solid #d7cbb3;border-radius:12px;padding:10px;font:16px Assistant,sans-serif;background:#fffdf8}
+    textarea{min-height:110px;resize:vertical}
+    .list{padding:0 16px 20px}
+    .card{background:#fff;border-radius:16px;padding:14px;margin-bottom:10px;border:1px solid rgba(201,162,39,.25)}
+    .card b{color:var(--navy);display:block;margin-bottom:6px}
+    .card p{white-space:pre-wrap;line-height:1.6}
+    .mine{display:flex;gap:8px;margin-top:10px}
+    .mine button{flex:1;border:0;border-radius:10px;padding:8px;font-weight:800}
+    .edit{background:#f3ead8;color:var(--navy)}
+    .del{background:#f3e8e8;color:#7a2e2e}
+    #note{text-align:center;color:#5a5346;padding:0 16px 16px}
+  </style>
+</head>
+<body>
+<div class="phone">
+  <div class="top">
+    <div class="badge">13</div>
+    <h1>ברכות מהאורחים</h1>
+    <p class="sub">כתבו ברכה לשגיב. ניתן לערוך או למחוק רק את הברכה שלכם</p>
+  </div>
+  <div class="row">
+    <a class="btn navy" href="brachot.html">ברכות המשפחה</a>
+    <a class="btn gold" href="./">חזרה</a>
+  </div>
+  <form id="form">
+    <label for="name">השם שלכם</label>
+    <input id="name" required maxlength="40" placeholder="שם מלא" />
+    <label for="text">הברכה</label>
+    <textarea id="text" required maxlength="600" placeholder="מזל טוב שגיב..."></textarea>
+    <div class="row" style="margin:12px 0 0">
+      <button class="btn gold" type="submit" id="save">שמירת ברכה</button>
+    </div>
+  </form>
+  <div class="list" id="list"></div>
+  <p id="note"></p>
+</div>
+<script>
+const STORE='https://extendsclass.com/api/json-storage/bin/beecddc';
+let owner=localStorage.getItem('shagiv-owner');
+if(!owner){ owner='u'+Math.random().toString(36).slice(2,10); localStorage.setItem('shagiv-owner', owner); }
+let editId=null, ALL=[];
+const list=document.getElementById('list'), note=document.getElementById('note');
+const nameEl=document.getElementById('name'), textEl=document.getElementById('text'), save=document.getElementById('save');
+async function readStore(){ try{ return await (await fetch(STORE+'?t='+Date.now(),{cache:'no-store'})).json(); }catch(e){ return {wishes:[]}; } }
+async function writeStore(data){ await fetch(STORE,{method:'PUT', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(data)}); }
+function draw(){
+  if(!ALL.length){ list.innerHTML='<p style="text-align:center;color:#5a5346;font-weight:700">עדיין אין ברכות מאורחים</p>'; return; }
+  list.innerHTML=ALL.map(w=>{
+    const mine=w.owner===owner;
+    const acts=mine?'<div class="mine"><button class="edit" data-id="'+w.id+'">עריכה</button><button class="del" data-id="'+w.id+'">מחיקה</button></div>':'';
+    return '<div class="card"><b>'+escapeHtml(w.name||'אורח')+'</b><p>'+escapeHtml(w.text||'')+'</p>'+acts+'</div>';
+  }).join('');
+  list.querySelectorAll('.edit').forEach(b=>b.onclick=()=>startEdit(b.dataset.id));
+  list.querySelectorAll('.del').forEach(b=>b.onclick=()=>delWish(b.dataset.id));
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+function startEdit(id){
+  const w=ALL.find(x=>x.id===id && x.owner===owner); if(!w) return;
+  editId=id; nameEl.value=w.name||''; textEl.value=w.text||''; save.textContent='עדכון ברכה'; nameEl.focus();
+}
+async function delWish(id){
+  const w=ALL.find(x=>x.id===id); if(!w||w.owner!==owner) return;
+  if(!confirm('למחוק את הברכה שלכם?')) return;
+  const data=await readStore();
+  data.wishes=(data.wishes||[]).filter(x=>x.id!==id);
+  await writeStore(data); load();
+}
+async function load(){
+  const data=await readStore();
+  ALL=(data.wishes||[]).slice().sort((a,b)=>(b.ts||0)-(a.ts||0));
+  draw();
+}
+document.getElementById('form').onsubmit=async e=>{
+  e.preventDefault();
+  const name=nameEl.value.trim(), text=textEl.value.trim();
+  if(!name||!text) return;
+  note.textContent='שומר...';
+  try{
+    const data=await readStore();
+    data.wishes=data.wishes||[];
+    if(editId){
+      data.wishes=data.wishes.map(w=> w.id===editId && w.owner===owner ? Object.assign({},w,{name,text}) : w);
+      editId=null; save.textContent='שמירת ברכה';
+    } else {
+      data.wishes.unshift({id:'w'+Date.now(), owner, name, text, ts:Date.now()});
+    }
+    await writeStore(data);
+    textEl.value=''; load(); note.textContent='הברכה נשמרה';
+  }catch(err){ note.textContent='לא הצלחנו לשמור. נסו שוב.'; }
+};
+load();
+</script>
+</body>
+</html>
