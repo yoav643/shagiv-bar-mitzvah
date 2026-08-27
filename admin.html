@@ -41,24 +41,21 @@ async function load(){
     (st.items||[]).forEach(x=>{ if(x&&x.id&&x.url) map.set(x.id,{id:x.id,url:x.url,video:!!x.video}); });
   }catch(e){}
   items=[...map.values()];
-  if(!items.length){ grid.innerHTML='<p>האלבום ריק</p>'; note.textContent=''; return; }
-  grid.innerHTML=items.map(it=>'<div class="item">'+(it.video?'<video src="'+it.url+'" controls playsinline></video>':'<img src="'+it.url+'">')+'<button data-id="'+it.id+'">מחיקה</button></div>').join('');
-  grid.querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>delOne(b.dataset.id));
+  grid.innerHTML=items.map(it=>'<div class="item">'+(it.video?'<video src="'+it.url+'" controls playsinline></video>':'<img src="'+it.url+'">')+'<button data-id="'+it.id+'">מחיקה</button></div>').join('') || '<p>האלבום ריק</p>';
+  grid.querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>removeOne(b.dataset.id).then(load));
   note.textContent=items.length+' פריטים';
 }
-async function delOne(id){
-  try{ await fetch('https://api.imgur.com/3/album/'+HASH+'/remove_images',{method:'POST', headers:AUTH, body:new URLSearchParams({ids:id})}); }catch(e){}
-  try{
-    const st=await (await fetch(STORE+'?t='+Date.now(),{cache:'no-store'})).json();
-    st.items=(st.items||[]).filter(x=>x.id!==id);
-    await fetch(STORE,{method:'PUT', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(st)});
-  }catch(e){}
-  load();
+async function removeOne(id){
+  try{ await fetch('https://api.imgur.com/3/album/'+HASH+'/remove_images',{method:'POST', headers:AUTH, body:new URLSearchParams({ids:String(id)})}); }catch(e){}
 }
 document.getElementById('delAll').onclick=async()=>{
-  if(!confirm('למחוק את הכל?')) return;
-  note.textContent='מוחק...';
-  for(const it of items){ try{ await delOne(it.id); }catch(e){} }
+  if(!items.length){ note.textContent='אין מה למחוק'; return; }
+  if(!confirm('למחוק את כל האלבום?')) return;
+  note.textContent='מוחק את הכל...';
+  const ids=items.map(x=>x.id);
+  for(const id of ids){ await removeOne(id); }
+  try{ await fetch(STORE,{method:'PUT', headers:{'Content-Type':'text/plain'}, body:'{"items":[]}'}); }catch(e){}
+  setTimeout(load,1200);
 };
 load();
 </script>
