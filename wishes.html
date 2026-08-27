@@ -22,11 +22,12 @@
     form{margin:8px 16px 16px;background:#fff;border-radius:18px;padding:14px;border:1px solid rgba(201,162,39,.3)}
     label{display:block;font-weight:800;color:var(--navy);margin:8px 0 4px;font-size:13px}
     input,textarea{width:100%;border:1.5px solid #d7cbb3;border-radius:12px;padding:10px;font:16px Assistant,sans-serif;background:#fffdf8}
-    textarea{min-height:110px;resize:vertical}
+    textarea{min-height:220px;resize:vertical}
     .list{padding:0 16px 20px}
     .card{background:#fff;border-radius:16px;padding:14px;margin-bottom:10px;border:1px solid rgba(201,162,39,.25)}
     .card b{color:var(--navy);display:block;margin-bottom:6px}
-    .card p{white-space:pre-wrap;line-height:1.6}
+    .card p{white-space:pre-wrap;line-height:1.65}
+    .card img{width:100%;border-radius:12px;margin-top:8px}
     .mine{display:flex;gap:8px;margin-top:10px}
     .mine button{flex:1;border:0;border-radius:10px;padding:8px;font-weight:800}
     .edit{background:#f3ead8;color:var(--navy)}
@@ -47,9 +48,9 @@
   </div>
   <form id="form">
     <label for="name">השם שלכם</label>
-    <input id="name" required maxlength="40" placeholder="שם מלא" />
+    <input id="name" required maxlength="80" placeholder="שם מלא" />
     <label for="text">הברכה</label>
-    <textarea id="text" required maxlength="500" placeholder="מזל טוב שגיב..."></textarea>
+    <textarea id="text" required placeholder="מזל טוב שגיב..."></textarea>
     <div class="row" style="margin:12px 0 0">
       <button class="btn gold" type="submit" id="save">שמירת ברכה</button>
     </div>
@@ -68,24 +69,42 @@ function parseWish(d){
   const s=String(d||'');
   if(!s.startsWith('WISH|')) return null;
   const p=s.split('|');
-  return {owner:p[1]||'', name:decodeURIComponent(p[2]||''), text:decodeURIComponent(p.slice(3).join('|')||'')};
+  let name='', text='', own=p[1]||'';
+  try{ name=decodeURIComponent(p[2]||''); text=decodeURIComponent(p.slice(3).join('|')||''); }catch(e){ name=p[2]||''; text=p.slice(3).join('|'); }
+  return {owner:own, name, text};
 }
-function descOf(name,text){ return 'WISH|'+owner+'|'+encodeURIComponent(name)+'|'+encodeURIComponent(text); }
+function localMap(){ try{return JSON.parse(localStorage.getItem('shagiv-wishes')||'{}');}catch(e){return{};} }
+function saveLocal(id,name,text){ const m=localMap(); m[id]={name,text,owner}; localStorage.setItem('shagiv-wishes', JSON.stringify(m)); }
+function descOf(name,text){
+  const full='WISH|'+owner+'|'+encodeURIComponent(name)+'|'+encodeURIComponent(text);
+  return full.length>1200 ? ('WISH|'+owner+'|'+encodeURIComponent(name)+'|') : full;
+}
+function wrapLines(ctx, text, maxWidth){
+  const lines=[];
+  for(const para of String(text||'').split('\n')){
+    if(!para){ lines.push(''); continue; }
+    let line='';
+    for(const w of para.split(' ')){
+      const test=line?line+' '+w:w;
+      if(ctx.measureText(test).width>maxWidth && line){ lines.push(line); line=w; }
+      else line=test;
+    }
+    if(line) lines.push(line);
+  }
+  return lines;
+}
 function cardBlob(name,text){
-  const c=document.createElement('canvas'); c.width=900; c.height=500;
+  const c=document.createElement('canvas');
   const x=c.getContext('2d');
-  x.fillStyle='#f7f1e4'; x.fillRect(0,0,900,500);
+  x.font='28px Assistant,Arial';
+  const lines=wrapLines(x, text, 780);
+  c.width=900; c.height=Math.max(360, 130+lines.length*38);
+  x.fillStyle='#f7f1e4'; x.fillRect(0,0,c.width,c.height);
   x.fillStyle='#1a2744'; x.font='bold 36px Assistant,Arial'; x.textAlign='right';
   x.fillText(name||'אורח', 860, 70);
   x.fillStyle='#5a5346'; x.font='28px Assistant,Arial';
-  const words=(text||'').split(' '); let line='', y=130;
-  for(const w of words){
-    const test=line?line+' '+w:w;
-    if(x.measureText(test).width>780){ x.fillText(line,860,y); line=w; y+=40; if(y>450) break; }
-    else line=test;
-  }
-  if(line) x.fillText(line,860,y);
-  return new Promise(res=>c.toBlob(res,'image/jpeg',0.85));
+  lines.forEach((ln,i)=>x.fillText(ln,860,130+i*38));
+  return new Promise(res=>c.toBlob(res,'image/jpeg',0.86));
 }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
 function draw(){
@@ -93,14 +112,15 @@ function draw(){
   list.innerHTML=ALL.map(w=>{
     const mine=w.owner===owner;
     const acts=mine?'<div class="mine"><button class="edit" data-id="'+w.id+'">עריכה</button><button class="del" data-id="'+w.id+'">מחיקה</button></div>':'';
-    return '<div class="card"><b>'+escapeHtml(w.name||'אורח')+'</b><p>'+escapeHtml(w.text||'')+'</p>'+acts+'</div>';
+    const body=w.text ? '<p>'+escapeHtml(w.text)+'</p>' : (w.img?'<img src="'+w.img+'" alt="">':'');
+    return '<div class="card"><b>'+escapeHtml(w.name||'אורח')+'</b>'+body+acts+'</div>';
   }).join('');
   list.querySelectorAll('.edit').forEach(b=>b.onclick=()=>startEdit(b.dataset.id));
   list.querySelectorAll('.del').forEach(b=>b.onclick=()=>delWish(b.dataset.id));
 }
 function startEdit(id){
   const w=ALL.find(x=>x.id===id && x.owner===owner); if(!w) return;
-  editId=id; nameEl.value=w.name||''; textEl.value=w.text||''; save.textContent='עדכון ברכה'; nameEl.focus();
+  editId=id; nameEl.value=w.name||''; textEl.value=w.text||''; save.textContent='עדכון ברכה'; textEl.focus();
 }
 async function delWish(id){
   const w=ALL.find(x=>x.id===id); if(!w||w.owner!==owner) return;
@@ -109,13 +129,14 @@ async function delWish(id){
   setTimeout(load,700);
 }
 async function load(){
-  ALL=[];
+  ALL=[]; const local=localMap();
   try{
     const js=await (await fetch('https://api.imgur.com/3/album/'+ALBUM+'/images?t='+Date.now(),{headers:{Authorization:AUTH},cache:'no-store'})).json();
     for(const x of (js.data||[])){
       const w=parseWish(x.description||x.title||'');
       if(!w) continue;
-      ALL.push({id:x.id, owner:w.owner, name:w.name, text:w.text});
+      if(local[x.id] && local[x.id].text) w.text=local[x.id].text;
+      ALL.push({id:x.id, owner:w.owner, name:w.name, text:w.text, img:x.link});
     }
   }catch(e){}
   draw();
@@ -137,7 +158,8 @@ document.getElementById('form').onsubmit=async e=>{
     fd.append('description', descOf(name,text));
     const r=await fetch('https://api.imgur.com/3/upload',{method:'POST', headers:{Authorization:AUTH}, body:fd});
     const j=await r.json();
-    if(!j||!j.success) throw new Error('upload');
+    if(!j||!j.success||!j.data) throw new Error('upload');
+    saveLocal(j.data.id, name, text);
     textEl.value=''; note.textContent='הברכה נשמרה';
     setTimeout(load,800);
   }catch(err){ note.textContent='לא הצלחנו לשמור. נסו שוב.'; }
