@@ -9,8 +9,8 @@
     body{margin:0;font-family:Arial,sans-serif;background:#1a2744}
     .wrap{max-width:440px;margin:16px auto;background:#f7f1e4;border-radius:24px;padding:16px}
     h1,p{text-align:center}h1{color:#1a2744}p{color:#5a5346}
-    .row{display:flex;gap:8px;margin:12px 0}
-    a.btn,button.btn{flex:1;text-align:center;text-decoration:none;border:0;border-radius:14px;padding:14px 8px;font-weight:800;font:800 15px Arial}
+    .row{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap}
+    a.btn,button.btn{flex:1;text-align:center;text-decoration:none;border:0;border-radius:14px;padding:12px 8px;font-weight:800;font:800 14px Arial;min-width:46%}
     .navy{background:#1a2744;color:#f3e7b8}.gold{background:#c9a227;color:#1a2744}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
     .item{background:#fff;border-radius:12px;overflow:hidden}
@@ -27,20 +27,27 @@
     <a class="btn gold" href="photos.html">להעלות</a>
     <a class="btn navy" href="./">חזרה</a>
   </div>
+  <div class="row">
+    <button class="btn navy" id="mineBtn" type="button">הצג רק מה שצילמתי</button>
+    <button class="btn gold" id="dlMine" type="button">הורד מה שצילמתי</button>
+  </div>
   <div class="row"><button class="btn gold" id="dl" type="button">הורדת הכל למחשב</button></div>
   <div id="grid" class="grid"></div>
   <p id="note"></p>
 </div>
 <script>
 const ALBUM_ID='LZUxwoK', HASH='zlu4GEWHMh6vEso', AUTH='Client-ID 546c25a59c58ad7';
-const q=new URLSearchParams(location.search).get('me');
-let owner=q || localStorage.getItem('shagiv-owner') || '';
-if(q) localStorage.setItem('shagiv-owner', q);
+const q=new URLSearchParams(location.search);
+let owner=q.get('me') || localStorage.getItem('shagiv-owner') || '';
+if(q.get('me')) localStorage.setItem('shagiv-owner', q.get('me'));
+let onlyMine = q.get('mine')==='1';
 function mineIds(){ try{return JSON.parse(localStorage.getItem('shagiv-mine-ids')||'[]');}catch(e){return[];} }
-const grid=document.getElementById('grid'), note=document.getElementById('note');
-let LAST=[];
+const grid=document.getElementById('grid'), note=document.getElementById('note'), mineBtn=document.getElementById('mineBtn');
+let ALL=[];
 function parseDesc(d){ d=String(d||''); if(d.startsWith('VID|')){ const p=d.split('|'); return {video:true, owner:p[1]||'', url:p.slice(2).join('|')}; } return {video:false, owner:d, url:''}; }
-function canDel(it){ return (it.owner && owner && it.owner===owner) || mineIds().includes(it.id); }
+function isMine(it){ return (it.owner && owner && it.owner===owner) || mineIds().includes(it.id); }
+function shown(){ return onlyMine ? ALL.filter(isMine) : ALL; }
+function labelMine(){ mineBtn.textContent=onlyMine?'הצג את הכל':'הצג רק מה שצילמתי'; }
 async function playable(url){
   if(!url || url.indexOf('tmpfiles.org')<0) return url;
   if(/tmpfiles\.org\/dl\/[^/]+\/[^/]+\//.test(url)) return url;
@@ -52,16 +59,16 @@ async function playable(url){
   }catch(e){}
   return url;
 }
-function draw(list){
-  LAST=list;
-  if(!list.length){ grid.innerHTML='<div class="empty">עדיין אין תמונות</div>'; return; }
+function draw(){
+  const list=shown();
+  if(!list.length){ grid.innerHTML='<div class="empty">'+(onlyMine?'לא נמצאו פריטים שלכם בטלפון הזה':'עדיין אין תמונות')+'</div>'; note.textContent=''; return; }
   grid.innerHTML=list.map(it=>{
     const media=it.video?'<video src="'+it.url+'" controls playsinline></video><a class="open" href="'+it.url+'" target="_blank" rel="noopener">פתיחת סרטון</a>':'<a href="'+it.url+'" target="_blank" rel="noopener"><img src="'+it.url+'"></a>';
-    const del=canDel(it)?'<button class="del" data-id="'+it.id+'">מחיקת התמונה שלי</button>':'';
+    const del=isMine(it)?'<button class="del" data-id="'+it.id+'">מחיקת התמונה שלי</button>':'';
     return '<div class="item">'+media+del+'</div>';
   }).join('');
   grid.querySelectorAll('.del').forEach(b=>b.onclick=()=>delOne(b.dataset.id));
-  note.textContent=list.length+' פריטים';
+  note.textContent=list.length+' פריטים'+(onlyMine?' שלכם':'');
 }
 async function delOne(id){
   if(!confirm('למחוק?')) return;
@@ -73,23 +80,26 @@ async function load(){
   try{
     const res=await fetch('https://api.imgur.com/3/album/'+ALBUM_ID+'/images?t='+Date.now(),{headers:{Authorization:AUTH},cache:'no-store'});
     const js=await res.json();
-    const list=await Promise.all((js.data||[]).map(async x=>{
+    ALL=await Promise.all((js.data||[]).map(async x=>{
       const meta=parseDesc(x.description||x.title||'');
       let url=meta.video && meta.url ? meta.url : x.link;
-      const video=meta.video || String(x.type||'').startsWith('video') || !!x.mp4;
+      const video=!!(meta.video || String(x.type||'').startsWith('video') || x.mp4);
       if(video) url=await playable(url);
       return {id:x.id, url, video, owner:meta.owner};
     }));
-    draw(list.filter(x=>x.url));
+    draw();
   }catch(e){ note.textContent='שגיאה בטעינה'; }
 }
-document.getElementById('dl').onclick=async()=>{
-  if(!LAST.length) return;
+async function zipOf(list, name){
+  if(!list.length){ note.textContent='אין קבצים'; return; }
   const zip=new JSZip(); let n=0;
-  for(const it of LAST){ try{ zip.file((it.video?'clip':'pic')+'-'+it.id+(it.video?'.mp4':'.jpg'), await (await fetch(it.url)).blob()); n++; }catch(e){} }
+  for(const it of list){ try{ zip.file((it.video?'clip':'pic')+'-'+it.id+(it.video?'.mp4':'.jpg'), await (await fetch(it.url)).blob()); n++; }catch(e){} }
   if(!n) return;
-  const a=document.createElement('a'); a.href=URL.createObjectURL(await zip.generateAsync({type:'blob'})); a.download='album-shagiv.zip'; a.click();
-};
-load(); setInterval(load,8000);
+  const a=document.createElement('a'); a.href=URL.createObjectURL(await zip.generateAsync({type:'blob'})); a.download=name; a.click();
+}
+mineBtn.onclick=()=>{ onlyMine=!onlyMine; labelMine(); draw(); };
+document.getElementById('dlMine').onclick=()=>zipOf(ALL.filter(isMine), 'shagiv-mine.zip');
+document.getElementById('dl').onclick=()=>zipOf(ALL, 'album-shagiv.zip');
+labelMine(); load(); setInterval(load,8000);
 </script>
 </body></html>
