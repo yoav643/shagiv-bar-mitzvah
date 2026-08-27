@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-cache" />
   <title>כסף מהאורחים · ניהול</title>
   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;700;800&family=Frank+Ruhl+Libre:wght@700;900&display=swap" rel="stylesheet" />
   <style>
@@ -16,7 +17,7 @@
     .sum span{color:#5a5346;font-size:13px}
     .box{background:#fff;border-radius:16px;padding:12px;margin:8px 0;border:1px solid #eadfc8}
     label{display:block;font-size:12px;font-weight:800;color:var(--navy);margin:6px 0 4px}
-    input,select{width:100%;padding:9px 10px;border-radius:10px;border:1.5px solid #d7cbb3;font:16px Assistant,sans-serif;background:#fff}
+    input{width:100%;padding:9px 10px;border-radius:10px;border:1.5px solid #d7cbb3;font:16px Assistant,sans-serif;background:#fff}
     .grid2{display:grid;grid-template-columns:1fr 90px;gap:8px}
     .add{width:100%;margin-top:10px;border:0;border-radius:12px;padding:12px;font:800 15px Assistant,sans-serif;background:var(--gold);color:var(--navy)}
     .filt{display:flex;gap:8px;margin:0 0 12px}
@@ -43,14 +44,8 @@
     <label>הוספת שם</label>
     <input id="newName" placeholder="שם האורח" />
     <div class="grid2">
-      <div>
-        <label>תיאור</label>
-        <input id="newDesc" list="cats" placeholder="למשל חברים יואב" />
-      </div>
-      <div>
-        <label>שולחן</label>
-        <input id="newTable" inputmode="numeric" placeholder="-" />
-      </div>
+      <div><label>תיאור</label><input id="newDesc" list="cats" placeholder="למשל חברים יואב" /></div>
+      <div><label>שולחן</label><input id="newTable" inputmode="numeric" placeholder="-" /></div>
     </div>
     <button class="add" id="addBtn" type="button">הוספת אורח</button>
   </div>
@@ -61,100 +56,81 @@
     <button type="button" id="hasBtn">עם סכום</button>
   </div>
   <datalist id="cats">
-    <option value="עבודה טלי"></option>
-    <option value="עבודה יואב"></option>
-    <option value="חברים יואב"></option>
-    <option value="חברים טלי"></option>
-    <option value="חברים טלי ויואב"></option>
-    <option value="חברים שגיב"></option>
-    <option value="חברים לין"></option>
-    <option value="משפחה טלי"></option>
-    <option value="משפחה יואב"></option>
+    <option value="עבודה טלי"></option><option value="עבודה יואב"></option>
+    <option value="חברים יואב"></option><option value="חברים טלי"></option>
+    <option value="חברים טלי ויואב"></option><option value="חברים שגיב"></option>
+    <option value="חברים לין"></option><option value="משפחה טלי"></option><option value="משפחה יואב"></option>
   </datalist>
   <div id="list"></div>
   <p id="note"></p>
 </div>
 <script src="app.js"></script>
 <script>
-const STORE='https://extendsclass.com/api/json-storage/bin/baffbbf';
+const ALBUM='LZUxwoK', HASH='zlu4GEWHMh6vEso', AUTH='Client-ID 546c25a59c58ad7';
 const LS='shagiv-gifts-v2';
 const note=document.getElementById('note');
 let filterMode='all';
-let data={gifts:{}, extras:[], updated:0};
-function readLocal(){
-  for(const k of [LS,'shagiv-gifts']){
-    try{
-      const raw=JSON.parse(localStorage.getItem(k)||'null');
-      if(!raw) continue;
-      if(raw.gifts || raw.extras) return {gifts:raw.gifts||{}, extras:raw.extras||[], updated:raw.updated||0};
-      if(typeof raw==='object') return {gifts:raw, extras:[], updated:0};
-    }catch(e){}
-  }
-  return {gifts:{}, extras:[], updated:0};
-}
-data=readLocal();
+let data={gifts:{}, extras:[]};
+let cashIds={};
 function keyOf(g){ return (g.name||'')+'|'+(g.table||''); }
 function num(v){ const n=Number(String(v==null?'':v).replace(/[^0-9.]/g,'')); return isFinite(n)&&n>0?n:0; }
+function enc(s){ return encodeURIComponent(s||''); }
+function dec(s){ try{ return decodeURIComponent(s||''); }catch(e){ return s||''; } }
 function rec(k){
   const v=data.gifts[k];
   if(v && typeof v==='object') return {amount:num(v.amount), desc:v.desc||''};
   return {amount:num(v), desc:''};
 }
-function score(pack){
-  let n=0;
-  const g=pack&&pack.gifts||{};
-  for(const k of Object.keys(g)){
-    const v=g[k];
-    if(v && typeof v==='object'){ if(num(v.amount)||v.desc) n++; }
-    else if(num(v)) n++;
-  }
-  return n+(pack.extras||[]).length;
-}
-function mergePack(a,b){
-  const out={gifts:Object.assign({}, a.gifts||{}), extras:(a.extras||[]).slice(), updated:Math.max(a.updated||0,b.updated||0)};
-  const bg=b.gifts||{};
-  for(const k of Object.keys(bg)){
-    const left=out.gifts[k], right=bg[k];
-    const L=(left&&typeof left==='object')?left:{amount:num(left),desc:''};
-    const R=(right&&typeof right==='object')?right:{amount:num(right),desc:''};
-    out.gifts[k]={amount:Math.max(num(L.amount),num(R.amount)), desc:R.desc||L.desc||''};
-  }
-  const seen=new Set((out.extras||[]).map(keyOf));
-  for(const g of (b.extras||[])){ if(!seen.has(keyOf(g))){ out.extras.push(g); seen.add(keyOf(g)); } }
-  return out;
-}
 function setRec(k, patch){
-  const cur=rec(k);
-  const next=Object.assign({}, cur, patch);
+  const next=Object.assign({}, rec(k), patch);
   if(!next.amount && !next.desc) delete data.gifts[k];
   else data.gifts[k]=next;
 }
-function saveLocal(){
-  data.updated=Date.now();
-  localStorage.setItem(LS, JSON.stringify(data));
-  localStorage.setItem('shagiv-gifts', JSON.stringify(data));
-}
-async function saveRemote(){
-  const body=JSON.stringify(data);
-  try{
-    await fetch(STORE,{method:'PUT', headers:{'Content-Type':'text/plain'}, body});
-  }catch(e){
-    try{ await fetch(STORE,{method:'PUT', headers:{'Content-Type':'application/json'}, body}); }catch(e2){}
-  }
-}
-function persist(){ saveLocal(); saveRemote(); totals(); note.textContent='נשמר במכשיר'; }
+function saveLocal(){ localStorage.setItem(LS, JSON.stringify({gifts:data.gifts, extras:data.extras, cashIds})); }
 function allGuests(){
   const base=(typeof GUESTS==='undefined'?[]:GUESTS).map(g=>({name:g.name,table:String(g.table||''),guests:g.guests||1,extra:false}));
-  const extras=(data.extras||[]).map(g=>({name:g.name,table:String(g.table||''),guests:g.guests||1,extra:true}));
-  return base.concat(extras);
+  return base.concat((data.extras||[]).map(g=>({name:g.name,table:String(g.table||''),guests:g.guests||1,extra:true})));
+}
+async function removeId(id){
+  if(!id) return;
+  try{ await fetch('https://api.imgur.com/3/album/'+HASH+'/remove_images',{method:'POST', headers:{Authorization:AUTH}, body:new URLSearchParams({ids:String(id)})}); }catch(e){}
+}
+function tinyBlob(){
+  const c=document.createElement('canvas'); c.width=8; c.height=8;
+  const x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,8,8);
+  return new Promise(res=>c.toBlob(res,'image/jpeg',0.4));
+}
+async function uploadCash(k, extra){
+  const r=rec(k);
+  const [name,table]=k.split('|');
+  const prefix=extra?'CASHX|':'CASH|';
+  const desc=prefix+enc(name)+'|'+enc(table)+'|'+r.amount+'|'+enc(r.desc||'');
+  const old=cashIds[k]||[];
+  for(const id of old) await removeId(id);
+  cashIds[k]=[];
+  const blob=await tinyBlob();
+  const fd=new FormData();
+  fd.append('image', new File([blob],'cash.jpg',{type:'image/jpeg'}));
+  fd.append('album', HASH);
+  fd.append('description', desc);
+  const js=await (await fetch('https://api.imgur.com/3/upload',{method:'POST', headers:{Authorization:AUTH}, body:fd})).json();
+  if(!js||!js.success||!js.data||!js.data.id) throw new Error('save');
+  cashIds[k]=[js.data.id];
+}
+async function persistKey(k, extra){
+  saveLocal();
+  totals();
+  note.textContent='שומר בשרת...';
+  try{
+    await uploadCash(k, extra);
+    saveLocal();
+    note.textContent='נשמר בשרת';
+  }catch(e){ note.textContent='נשמר רק במכשיר — השרת נכשל'; }
 }
 function totals(){
   const people=allGuests();
   let sum=0, filled=0;
-  for(const g of people){
-    const a=rec(keyOf(g)).amount;
-    if(a){ sum+=a; filled++; }
-  }
+  for(const g of people){ if(rec(keyOf(g)).amount){ sum+=rec(keyOf(g)).amount; filled++; } }
   document.getElementById('total').textContent=sum.toLocaleString('he-IL')+' ₪';
   document.getElementById('filled').textContent=filled+' עם סכום · '+(people.length-filled)+' בלי סכום';
   document.getElementById('missBtn').textContent='בלי סכום ('+(people.length-filled)+')';
@@ -181,59 +157,76 @@ function draw(){
   for(const g of filt){
     const k=keyOf(g), r=rec(k);
     if(g.table!==last){ html+='<div class="tbl">'+(g.table?('שולחן '+g.table):'ללא שולחן')+'</div>'; last=g.table; }
-    html+='<div class="row"><div class="top"><div class="name">'+g.name+'<span class="meta">'+(g.guests||1)+' אורחים'+(g.extra?' · נוסף':'')+'</span></div><input class="amt" data-key="'+k+'" inputmode="numeric" placeholder="₪" value="'+(r.amount||'')+'" /></div>';
-    html+='<input class="desc" list="cats" data-desc="'+k+'" placeholder="תיאור: עבודה / חברים / משפחה" value="'+(r.desc||'')+'" />';
+    html+='<div class="row"><div class="top"><div class="name">'+g.name+'<span class="meta">'+(g.guests||1)+' אורחים'+(g.extra?' · נוסף':'')+'</span></div>';
+    html+='<input class="amt" data-key="'+k+'" data-extra="'+(g.extra?1:0)+'" inputmode="numeric" placeholder="₪" value="'+(r.amount||'')+'" /></div>';
+    html+='<input class="desc" list="cats" data-desc="'+k+'" data-extra="'+(g.extra?1:0)+'" placeholder="תיאור" value="'+(r.desc||'')+'" />';
     if(g.extra) html+='<button class="del" data-del="'+k+'">מחיקת שם</button>';
     html+='</div>';
   }
   document.getElementById('list').innerHTML=html||'<p style="text-align:center;color:#5a5346">לא נמצאו אורחים</p>';
   document.querySelectorAll('input.amt').forEach(inp=>{
-    inp.onchange=inp.onblur=()=>{ setRec(inp.dataset.key,{amount:num(inp.value)}); inp.value=rec(inp.dataset.key).amount||''; persist(); };
+    inp.onchange=inp.onblur=()=>{ setRec(inp.dataset.key,{amount:num(inp.value)}); inp.value=rec(inp.dataset.key).amount||''; persistKey(inp.dataset.key, inp.dataset.extra==='1'); };
   });
   document.querySelectorAll('input.desc').forEach(inp=>{
-    inp.onchange=inp.onblur=()=>{ setRec(inp.dataset.desc,{desc:inp.value.trim()}); persist(); };
+    inp.onchange=inp.onblur=()=>{ setRec(inp.dataset.desc,{desc:inp.value.trim()}); persistKey(inp.dataset.desc, inp.dataset.extra==='1'); };
   });
   document.querySelectorAll('[data-del]').forEach(btn=>{
-    btn.onclick=()=>{
+    btn.onclick=async()=>{
       if(!confirm('למחוק את השם?')) return;
       const k=btn.dataset.del;
       data.extras=(data.extras||[]).filter(g=>keyOf(g)!==k);
       delete data.gifts[k];
-      persist(); draw();
+      for(const id of (cashIds[k]||[])) await removeId(id);
+      delete cashIds[k];
+      saveLocal(); draw();
     };
   });
   totals();
+}
+async function loadServer(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(LS)||'null');
+    if(raw&&raw.gifts){ data.gifts=raw.gifts||{}; data.extras=raw.extras||[]; cashIds=raw.cashIds||{}; }
+  }catch(e){}
+  try{
+    const js=await (await fetch('https://api.imgur.com/3/album/'+ALBUM+'/images?t='+Date.now(),{headers:{Authorization:AUTH},cache:'no-store'})).json();
+    const gifts={}, extras=[], ids={};
+    for(const x of (js.data||[])){
+      const d=String(x.description||x.title||'');
+      if(!d.startsWith('CASH|') && !d.startsWith('CASHX|')) continue;
+      const extra=d.startsWith('CASHX|');
+      const p=d.split('|');
+      const name=dec(p[1]||''), table=dec(p[2]||''), amount=num(p[3]), desc=dec(p.slice(4).join('|'));
+      const k=name+'|'+table;
+      gifts[k]={amount, desc};
+      ids[k]=(ids[k]||[]).concat([x.id]);
+      if(extra && !extras.some(g=>g.name===name && String(g.table)===String(table))) extras.push({name, table, guests:1});
+    }
+    data.gifts=Object.assign({}, data.gifts, gifts);
+    const seen=new Set((data.extras||[]).map(keyOf));
+    for(const g of extras){ if(!seen.has(keyOf(g))) data.extras.push(g); }
+    cashIds=Object.assign({}, cashIds, ids);
+    saveLocal();
+    note.textContent='נטען מהשרת';
+  }catch(e){ note.textContent='נטען מהמכשיר'; }
+  draw();
 }
 document.getElementById('addBtn').onclick=()=>{
   const name=document.getElementById('newName').value.trim();
   const desc=document.getElementById('newDesc').value.trim();
   const table=document.getElementById('newTable').value.trim();
   if(!name){ note.textContent='חסר שם'; return; }
-  data.extras=data.extras||[];
   if(allGuests().some(g=>g.name===name && String(g.table)===String(table))){ note.textContent='השם כבר קיים'; return; }
+  data.extras=data.extras||[];
   data.extras.push({name, table, guests:1});
   if(desc) setRec(name+'|'+table,{desc});
   document.getElementById('newName').value='';
-  persist(); draw();
+  persistKey(name+'|'+table, true); draw();
 };
 document.getElementById('q').oninput=draw;
 document.getElementById('allBtn').onclick=()=>setFilter('all');
 document.getElementById('missBtn').onclick=()=>setFilter('miss');
 document.getElementById('hasBtn').onclick=()=>setFilter('has');
-async function loadRemote(){
-  const local=readLocal();
-  data=local;
-  try{
-    const js=await (await fetch(STORE+'?t='+Date.now(),{cache:'no-store'})).json();
-    if(js && typeof js==='object'){
-      const remote=(js.gifts||js.extras)?js:{gifts:js, extras:[], updated:0};
-      if(score(remote)>0) data=mergePack(local, remote);
-    }
-  }catch(e){}
-  saveLocal();
-  if(score(data)>0) saveRemote();
-  draw();
-}
-loadRemote();
+loadServer();
 </script>
 </body></html>
