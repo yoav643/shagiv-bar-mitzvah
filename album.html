@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-cache" />
   <title>האלבום המשותף</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
@@ -14,8 +15,8 @@
     .navy{background:#1a2744;color:#f3e7b8}.gold{background:#c9a227;color:#1a2744}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
     .item{background:#fff;border-radius:12px;overflow:hidden}
-    .item img,.item video{width:100%;height:160px;object-fit:cover;display:block;background:#ddd}
-    .open{display:block;text-align:center;font-size:13px;font-weight:800;padding:8px;color:#1a2744;text-decoration:none}
+    .item img,.item video{width:100%;height:160px;object-fit:cover;display:block;background:#000}
+    .open{display:block;text-align:center;font-size:13px;font-weight:800;padding:8px;color:#1a2744;text-decoration:none;background:#f3ead8}
     .del{width:100%;border:0;background:#eee;color:#7a2e2e;font-weight:800;padding:8px}
     .empty{grid-column:1/-1;text-align:center;font-weight:700;padding:18px}
   </style>
@@ -40,41 +41,42 @@ const ALBUM_ID='LZUxwoK', HASH='zlu4GEWHMh6vEso', AUTH='Client-ID 546c25a59c58ad
 const q=new URLSearchParams(location.search);
 let owner=q.get('me') || localStorage.getItem('shagiv-owner') || '';
 if(q.get('me')) localStorage.setItem('shagiv-owner', q.get('me'));
-let onlyMine = q.get('mine')==='1';
+let onlyMine=false;
 function mineIds(){ try{return JSON.parse(localStorage.getItem('shagiv-mine-ids')||'[]');}catch(e){return[];} }
 const grid=document.getElementById('grid'), note=document.getElementById('note'), mineBtn=document.getElementById('mineBtn');
 let ALL=[];
 function parseDesc(d){ d=String(d||''); if(d.startsWith('VID|')){ const p=d.split('|'); return {video:true, owner:p[1]||'', url:p.slice(2).join('|')}; } return {video:false, owner:d, url:''}; }
 function isMine(it){ return (it.owner && owner && it.owner===owner) || mineIds().includes(it.id); }
-function shown(){ return onlyMine ? ALL.filter(isMine) : ALL; }
+function shown(){ const list=onlyMine?ALL.filter(isMine):ALL; return list; }
 function labelMine(){ mineBtn.textContent=onlyMine?'הצג את הכל':'הצג רק מה שצילמתי'; }
 async function playable(url){
   if(!url || url.indexOf('tmpfiles.org')<0) return url;
-  if(/tmpfiles\.org\/dl\/[^/]+\/[^/]+\//.test(url)) return url;
-  const view=url.replace('https://tmpfiles.org/dl/','https://tmpfiles.org/');
+  if(/\/dl\/[^/]+\/[^/]+\//.test(url)) return url;
+  const view=url.replace('/dl/','/');
   try{
     const page=await (await fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(view))).text();
     const m=page.match(/https:\/\/tmpfiles\.org\/dl\/[^"'\s<]+/);
     if(m) return m[0];
   }catch(e){}
-  return url;
+  return view;
 }
 function draw(){
   const list=shown();
-  if(!list.length){ grid.innerHTML='<div class="empty">'+(onlyMine?'לא נמצאו פריטים שלכם בטלפון הזה':'עדיין אין תמונות')+'</div>'; note.textContent=''; return; }
+  if(!list.length){ grid.innerHTML='<div class="empty">'+(onlyMine?'לא נמצאו פריטים שלכם. לחצ\u05d5 הצג את הכל.':'עדיין אין תמונות')+'</div>'; return; }
   grid.innerHTML=list.map(it=>{
-    const media=it.video?'<video src="'+it.url+'" controls playsinline></video><a class="open" href="'+it.url+'" target="_blank" rel="noopener">פתיחת סרטון</a>':'<a href="'+it.url+'" target="_blank" rel="noopener"><img src="'+it.url+'"></a>';
+    const media=it.video
+      ? '<video src="'+it.url+'" controls playsinline></video><a class="open" href="'+it.url+'" target="_blank" rel="noopener">פתיחת סרטון</a>'
+      : '<a href="'+it.url+'" target="_blank" rel="noopener"><img src="'+it.url+'"></a>';
     const del=isMine(it)?'<button class="del" data-id="'+it.id+'">מחיקת התמונה שלי</button>':'';
     return '<div class="item">'+media+del+'</div>';
   }).join('');
   grid.querySelectorAll('.del').forEach(b=>b.onclick=()=>delOne(b.dataset.id));
-  note.textContent=list.length+' פריטים'+(onlyMine?' שלכם':'');
+  note.textContent=list.length+' פריטים באלבום';
 }
 async function delOne(id){
   if(!confirm('למחוק?')) return;
   try{ await fetch('https://api.imgur.com/3/album/'+HASH+'/remove_images',{method:'POST', headers:{Authorization:AUTH}, body:new URLSearchParams({ids:id})}); }catch(e){}
-  localStorage.setItem('shagiv-mine-ids', JSON.stringify(mineIds().filter(x=>x!==id)));
-  setTimeout(load,600);
+  setTimeout(load,700);
 }
 async function load(){
   try{
@@ -82,13 +84,13 @@ async function load(){
     const js=await res.json();
     ALL=await Promise.all((js.data||[]).map(async x=>{
       const meta=parseDesc(x.description||x.title||'');
-      let url=meta.video && meta.url ? meta.url : x.link;
       const video=!!(meta.video || String(x.type||'').startsWith('video') || x.mp4);
+      let url=video ? (meta.url||x.mp4||x.link) : x.link;
       if(video) url=await playable(url);
       return {id:x.id, url, video, owner:meta.owner};
     }));
     draw();
-  }catch(e){ note.textContent='שגיאה בטעינה'; }
+  }catch(e){ note.textContent='שגיאה בטעינת האלבום'; }
 }
 async function zipOf(list, name){
   if(!list.length){ note.textContent='אין קבצים'; return; }
@@ -100,6 +102,6 @@ async function zipOf(list, name){
 mineBtn.onclick=()=>{ onlyMine=!onlyMine; labelMine(); draw(); };
 document.getElementById('dlMine').onclick=()=>zipOf(ALL.filter(isMine), 'shagiv-mine.zip');
 document.getElementById('dl').onclick=()=>zipOf(ALL, 'album-shagiv.zip');
-labelMine(); load(); setInterval(load,8000);
+labelMine(); load(); setInterval(load,6000);
 </script>
 </body></html>
