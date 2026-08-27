@@ -29,16 +29,21 @@
     .strip img,.strip video{width:72px;height:72px;object-fit:cover;border-radius:10px;background:#222;display:block}
     .strip .del{position:absolute;top:-6px;left:-6px;width:22px;height:22px;border:0;border-radius:50%;background:#e11d2e;color:#fff;font-weight:800}
     .hidden{position:absolute;opacity:0;width:1px;height:1px}
-    a.nav{color:#f3e7b8;text-decoration:none;font-weight:800;font-size:13px}
+    a.nav{color:#111;text-decoration:none;font-weight:800;font-size:13px;background:#f3e7b8;border-radius:999px;padding:8px 12px}
+    .flash{position:absolute;top:10px;left:10px;z-index:2;width:44px;height:44px;border:0;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;font-size:20px}
+    .flash.on{background:#f3c14b;color:#111}
   </style>
 </head>
 <body>
 <div class="app">
   <div class="topbar">
-    <a class="nav" href="./">חזרה</a>
-    <a class="nav" href="album.html">אלבום</a>
+    <a class="nav" href="./">לדף הבית</a>
+    <a class="nav" href="album.html">צפייה באלבום</a>
   </div>
-  <div class="stage"><video id="live" class="front" playsinline autoplay muted></video></div>
+  <div class="stage">
+    <button class="flash" id="flash" type="button" aria-label="פלאש">⚡</button>
+    <video id="live" class="front" playsinline autoplay muted></video>
+  </div>
   <div class="modes">
     <button type="button" id="modePhoto" class="on">תמונה</button>
     <button type="button" id="modeVideo">סרטון</button>
@@ -60,7 +65,7 @@
 const AUTH='Client-ID 546c25a59c58ad7', HASH='zlu4GEWHMh6vEso';
 const live=document.getElementById('live'), note=document.getElementById('note'), list=document.getElementById('list');
 const gal=document.getElementById('gal'), flip=document.getElementById('flip'), shutter=document.getElementById('shutter');
-let stream=null, recorder=null, chunks=[], facing='user', mode='photo', recTimer=null, recLeft=60;
+let stream=null, recorder=null, chunks=[], facing='user', mode='photo', recTimer=null, recLeft=60, torchOn=false;
 let owner=localStorage.getItem('shagiv-owner');
 if(!owner){ owner='u'+Math.random().toString(36).slice(2,10); localStorage.setItem('shagiv-owner', owner); }
 function mineIds(){ try{return JSON.parse(localStorage.getItem('shagiv-mine-ids')||'[]');}catch(e){return[];} }
@@ -119,14 +124,25 @@ async function hostVideo(file){
   try{ return await litterbox(file); }catch(e){}
   return await tmpVideo(file);
 }
+async function setTorch(on){
+  torchOn=!!on;
+  const track=stream && stream.getVideoTracks()[0];
+  const flash=document.getElementById('flash');
+  flash.classList.toggle('on', torchOn);
+  if(!track) return;
+  try{ await track.applyConstraints({advanced:[{torch:torchOn}]}); }
+  catch(e){ if(torchOn) say('הפלאש לא נתמך במצלמה הזו'); torchOn=false; flash.classList.remove('on'); }
+}
 async function startCamera(){
   try{
     if(stream) stream.getTracks().forEach(t=>t.stop());
     stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing}},audio:true});
     live.srcObject=stream; await live.play();
     live.classList.toggle('front', facing==='user');
+    if(torchOn) setTorch(true);
   }catch(e){ say('אשרו הרשאת מצלמה'); }
 }
+document.getElementById('flash').onclick=()=>setTorch(!torchOn);
 function setMode(m){
   mode=m;
   document.getElementById('modePhoto').classList.toggle('on', m==='photo');
