@@ -21,8 +21,11 @@
     h1 { font-family:"Frank Ruhl Libre",serif; font-weight:900; font-size:26px; color:var(--navy); margin:6px 0 2px; }
     .meta { font-size:13.5px; color:#5a5346; }
     .when { display:inline-flex; margin-top:10px; background:var(--white); border:1px solid rgba(201,162,39,.35); border-radius:999px; padding:6px 12px; font-weight:700; color:var(--navy); font-size:13px; }
-    .venue strong { display:block; font-family:"Frank Ruhl Libre",serif; font-size:20px; color:var(--navy); margin-top:10px; }
+    .venue { margin-top:10px; display:flex; align-items:center; justify-content:center; gap:10px; }
+    .venue strong { display:block; font-family:"Frank Ruhl Libre",serif; font-size:20px; color:var(--navy); }
     .venue span { font-size:13px; color:#5a5346; }
+    .waze { width:42px; height:42px; border-radius:12px; background:#33ccff; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .waze svg { width:26px; height:26px; }
     .divider { height:1px; margin:14px 28px 0; background:linear-gradient(90deg,transparent,var(--gold),transparent); }
     .actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:14px 18px 0; }
     .actions a { text-decoration:none; text-align:center; border-radius:14px; padding:12px 8px; font-weight:800; font-size:15px; }
@@ -81,7 +84,12 @@
       <div class="cd-box"><b>--</b><span>דקות</span></div>
       <div class="cd-box"><b>--</b><span>שניות</span></div>
     </div>
-    <div class="venue"><strong>אורימא</strong><span>הפלדה 13, באר שבע</span></div>
+    <div class="venue">
+      <div><strong>אורימא</strong><span>הפלדה 13, באר שבע</span></div>
+      <a class="waze" href="https://www.waze.com/ul?q=%D7%90%D7%95%D7%A8%D7%99%D7%9E%D7%90%20%D7%94%D7%A4%D7%9C%D7%93%D7%94%2013%20%D7%91%D7%90%D7%A8%20%D7%A9%D7%91%D7%A2&navigate=yes" target="_blank" rel="noopener" aria-label="ניווט ב-Waze">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 3c4.6 0 8.2 3.2 8.2 8.1 0 3.4-2.2 6.4-4.3 8.2-.7.6-1.6.4-2-.3l-1.4-2.3c-.3-.5-.9-.7-1.5-.5-1.3.4-2.7.3-3.8-.4-2.6-1.7-3.4-4.7-2.2-7.3C6.3 5.2 8.9 3 12 3z" fill="#1A2744"/><circle cx="9.3" cy="10.2" r="1.2" fill="#33ccff"/><circle cx="14.2" cy="10.2" r="1.2" fill="#33ccff"/></svg>
+      </a>
+    </div>
     <div class="divider"></div>
   </div>
   <div class="actions">
