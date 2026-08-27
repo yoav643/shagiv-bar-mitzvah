@@ -3,38 +3,56 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>צילום לאלבום</title>
+  <meta name="theme-color" content="#1a2744" />
+  <title>צילום לאלבום · שגיב</title>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Frank+Ruhl+Libre:wght@700;900&display=swap" rel="stylesheet" />
   <style>
-    body{margin:0;font-family:Arial,sans-serif;background:#1a2744}
-    .card{max-width:440px;margin:16px auto;background:#f7f1e4;border-radius:24px;padding:16px}
-    h1,p{text-align:center}h1{color:#1a2744}p{color:#5a5346}
-    video#live{width:100%;border-radius:16px;background:#000;min-height:200px;object-fit:cover}
+    :root{--navy:#1a2744;--gold:#c9a227;--cream:#f7f1e4}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{min-height:100vh;background:radial-gradient(ellipse at top,#2c3d62,#1a2744 55%,#10182a);font-family:Assistant,Tahoma,sans-serif;display:flex;justify-content:center;padding:16px 12px 32px}
+    .phone{width:100%;max-width:440px;background:var(--cream);border-radius:28px;overflow:hidden;box-shadow:0 0 0 8px var(--navy),0 24px 60px rgba(0,0,0,.45)}
+    .top{text-align:center;padding:20px 18px 6px}
+    .badge{width:56px;height:56px;margin:0 auto 8px;border-radius:50%;background:var(--navy);color:#f3e7b8;display:flex;align-items:center;justify-content:center;font-family:"Frank Ruhl Libre",serif;font-weight:900;font-size:24px;border:3px solid #e8d48b}
+    h1{font-family:"Frank Ruhl Libre",serif;color:var(--navy);font-size:26px}
+    .sub{color:#5a5346;margin:4px 0 10px}
+    .stage{margin:0 16px;border-radius:20px;overflow:hidden;background:#000;position:relative}
+    video#live{width:100%;min-height:240px;object-fit:cover;display:block}
     .front{transform:scaleX(-1)}
-    .row{display:flex;gap:8px;margin-top:10px}
-    button,.back{flex:1;border:0;border-radius:14px;padding:12px 8px;font-weight:800}
-    .cam{background:#1a2744;color:#f3e7b8}.gal{background:#c9a227;color:#1a2744}.rec{background:#7a2e2e;color:#fff}
-    .del{background:#eee;color:#7a2e2e;width:100%;margin-top:8px}
-    .back{display:block;text-align:center;text-decoration:none;background:#fff;color:#1a2744;margin-top:12px}
+    .row{display:flex;gap:8px;margin:10px 16px}
+    button,.back{flex:1;border:0;border-radius:14px;padding:13px 8px;font:800 14px Assistant,sans-serif}
+    .cam{background:var(--navy);color:#f3e7b8}
+    .gal{background:var(--gold);color:var(--navy)}
+    .rec{background:#8b2e2e;color:#fff}
+    .back{display:block;text-align:center;text-decoration:none;background:#fff;color:var(--navy);margin:8px 16px 0}
     .hidden{position:absolute;opacity:0;width:1px;height:1px}
-    .item{background:#fff;border-radius:12px;padding:8px;margin-top:8px;text-align:center}
-    .item img,.item video{width:100%;max-height:220px;object-fit:cover;border-radius:8px}
+    #note{text-align:center;color:#5a5346;min-height:24px;padding:6px 16px 4px;font-weight:700}
+    .item{background:#fff;border-radius:16px;margin:10px 16px;padding:8px;text-align:center;box-shadow:0 6px 16px rgba(26,39,68,.08)}
+    .item img,.item video{width:100%;max-height:220px;object-fit:cover;border-radius:12px}
+    .del{background:#f3e8e8;color:#7a2e2e;width:100%;margin-top:8px}
+    .bottom{padding-bottom:18px}
   </style>
 </head>
 <body>
-<div class="card">
-  <h1>צילום לאלבום</h1>
-  <video id="live" class="front" playsinline autoplay muted></video>
+<div class="phone">
+  <div class="top">
+    <div class="badge">13</div>
+    <h1>צילום לאלבום</h1>
+    <p class="sub">סלפי או מצלמה אחורית · תמונה או סרטון</p>
+  </div>
+  <div class="stage"><video id="live" class="front" playsinline autoplay muted></video></div>
   <div class="row"><button class="cam" id="flip" type="button">החלף למצלמה אחורית</button></div>
   <div class="row">
     <button class="cam" id="snap" type="button">צלם והעלה</button>
     <button class="rec" id="rec" type="button">הקלט סרטון</button>
   </div>
-  <div class="row"><button class="gal" id="openGal" type="button">מהגלריה</button></div>
+  <div class="row"><button class="gal" id="openGal" type="button">בחירה מהגלריה</button></div>
   <input id="gal" class="hidden" type="file" accept="image/*,video/*" multiple>
   <p id="note"></p>
   <div id="list"></div>
-  <a class="back" href="album.html">לאלבום המשותף</a>
-  <a class="back" href="./">חזרה</a>
+  <div class="bottom">
+    <a class="back" href="album.html">לאלבום המשותף</a>
+    <a class="back" href="./">חזרה לעמוד הראשי</a>
+  </div>
 </div>
 <script>
 const AUTH='Client-ID 546c25a59c58ad7', HASH='zlu4GEWHMh6vEso';
@@ -78,10 +96,7 @@ function frameBlob(){
   return new Promise(res=>c.toBlob(res,'image/jpeg',0.8));
 }
 async function litterbox(file){
-  const fd=new FormData();
-  fd.append('reqtype','fileupload');
-  fd.append('time','72h');
-  fd.append('fileToUpload', file);
+  const fd=new FormData(); fd.append('reqtype','fileupload'); fd.append('time','72h'); fd.append('fileToUpload', file);
   const r=await fetch('https://litterbox.catbox.moe/resources/internals/api.php',{method:'POST', body:fd});
   const url=(await r.text()).trim();
   if(!url.startsWith('http')) throw new Error(url||'litterbox');
@@ -146,7 +161,7 @@ async function upload(blob,name,video,poster){
       entry={id:data.id,url:data.link,video:false,owner};
     }
     addMine(entry.id); items.unshift(entry); saveItems(); render();
-    say('נשמר באלבום. סרטון נשמר כ-72 שעות');
+    say('נשמר באלבום המשותף');
   }catch(e){ say('העלאה נכשלה: '+(e.message||e)); }
 }
 render(); startCamera();
