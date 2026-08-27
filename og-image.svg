@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#152038"/>
+  <rect width="1200" height="18" fill="#c9a227"/>
+  <rect y="612" width="1200" height="18" fill="#c9a227"/>
+  <rect x="64" y="46" width="1072" height="538" rx="40" fill="#f7f1e4"/>
+  <circle cx="600" cy="155" r="75" fill="#1a2744" stroke="#e8d48b" stroke-width="7"/>
+  <text x="600" y="178" text-anchor="middle" font-family="Assistant, Heebo, Arial" font-size="72" font-weight="800" fill="#e8d48b">13</text>
+  <text x="600" y="280" text-anchor="middle" font-family="Assistant, Heebo, Arial" font-size="32" fill="#5a5346">בר המצווה של</text>
+  <text x="600" y="350" text-anchor="middle" font-family="Frank Ruhl Libre, Heebo, Arial" font-size="56" font-weight="800" fill="#1a2744">שגיב פסטינגר</text>
+  <text x="600" y="420" text-anchor="middle" font-family="Assistant, Arial" font-size="28" fill="#5a5346">27.08.2026  ·  19:30  ·  אורימא</text>
+  <text x="600" y="500" text-anchor="middle" font-family="Assistant, Arial" font-size="30" font-weight="700" fill="#c9a227">לחצו כדי למצוא את מספר השולחן</text>
+</svg>
