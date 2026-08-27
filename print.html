@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>האפליקציה הרשמית · שגיב</title>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;700;800&family=Frank+Ruhl+Libre:wght@700;900&display=swap" rel="stylesheet" />
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#ece6d8;font-family:Assistant,Tahoma,sans-serif;color:#1a2744;display:flex;justify-content:center;padding:16px}
+    .page{width:100%;max-width:720px;background:#f7f1e4;border:2px solid #1a2744;border-radius:18px;padding:28px 24px;text-align:center}
+    h1{font-family:"Frank Ruhl Libre",serif;font-size:28px}
+    h2{font-family:"Frank Ruhl Libre",serif;font-size:22px;margin:4px 0 8px}
+    .meta{color:#5a5346;margin-bottom:12px}
+    img.qr{width:220px;height:220px;background:#fff;padding:8px;border-radius:12px}
+    .hint{font-weight:800;margin-top:8px}
+    .url{font-size:13px;color:#5a5346;margin:4px 0 18px;direction:ltr}
+    .list{text-align:right;max-width:520px;margin:0 auto}
+    .item{background:#fff;border:1px solid rgba(201,162,39,.35);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+    .item b{display:block;margin-bottom:2px}
+    .item span{color:#5a5346;font-size:14px}
+    .print{margin-top:16px;border:0;background:#1a2744;color:#f3e7b8;border-radius:12px;padding:12px 18px;font:800 16px Assistant,sans-serif}
+    @media print{
+      body{background:#fff;padding:0}
+      .print{display:none}
+      .page{border-radius:0;border-width:2px}
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+  <h1>האפליקציה הרשמית</h1>
+  <h2>בר המצווה של שגיב פסטינגר</h2>
+  <p class="meta">אורימא · הפלדה 13, באר שבע · 27.08.2026 · 19:30</p>
+  <img class="qr" alt="QR" src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=https%3A%2F%2Fyoav643.github.io%2Fshagiv-bar-mitzvah%2F" />
+  <p class="hint">סירקו כדי להיכנס לאפליקציה</p>
+  <p class="url">https://yoav643.github.io/shagiv-bar-mitzvah/</p>
+  <div class="list">
+    <div class="item"><b>מה השולחן שלי?</b><span>הקלידו מספר טלפון ותראו את מספר השולחן ואת מפת האולם</span></div>
+    <div class="item"><b>ניווט עם Waze</b><span>לחיצה על האייקון פותחת ניווט ישיר לאורימא</span></div>
+    <div class="item"><b>מתנה לבר מצווה</b><span>אייקון המתנה פותח העברה בביט או בפייבוקס</span></div>
+    <div class="item"><b>צלמו את עצמכם באירוע</b><span>צילום תמונות וסרטונים ישירות מהטלפון לאלבום המשותף</span></div>
+    <div class="item"><b>ברכות המשפחה</b><span>הברכות של אמא, אבא, לין ויובל</span></div>
+    <div class="item"><b>ברכות מהאורחים</b><span>כתבו ברכה לשגיב, ערכו או מחקו רק את הברכה שלכם</span></div>
+  </div>
+  <button class="print" onclick="window.print()">הדפסה</button>
+</div>
+</body>
+</html>
