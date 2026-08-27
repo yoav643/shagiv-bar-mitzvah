@@ -2,62 +2,65 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#1a2744" />
-  <title>צילום לאלבום · שגיב</title>
-  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Frank+Ruhl+Libre:wght@700;900&display=swap" rel="stylesheet" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#000" />
+  <title>צילום</title>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@600;800&display=swap" rel="stylesheet" />
   <style>
-    :root{--navy:#1a2744;--gold:#c9a227;--cream:#f7f1e4}
     *{box-sizing:border-box;margin:0;padding:0}
-    body{min-height:100vh;background:radial-gradient(ellipse at top,#2c3d62,#1a2744 55%,#10182a);font-family:Assistant,Tahoma,sans-serif;display:flex;justify-content:center;padding:16px 12px 32px}
-    .phone{width:100%;max-width:440px;background:var(--cream);border-radius:28px;overflow:hidden;box-shadow:0 0 0 8px var(--navy),0 24px 60px rgba(0,0,0,.45)}
-    .top{text-align:center;padding:20px 18px 6px}
-    .badge{width:56px;height:56px;margin:0 auto 8px;border-radius:50%;background:var(--navy);color:#f3e7b8;display:flex;align-items:center;justify-content:center;font-family:"Frank Ruhl Libre",serif;font-weight:900;font-size:24px;border:3px solid #e8d48b}
-    h1{font-family:"Frank Ruhl Libre",serif;color:var(--navy);font-size:26px}
-    .sub{color:#5a5346;margin:4px 0 10px}
-    .stage{margin:0 16px;border-radius:20px;overflow:hidden;background:#000;position:relative}
-    video#live{width:100%;min-height:240px;object-fit:cover;display:block}
+    html,body{height:100%;background:#000;font-family:Assistant,sans-serif;color:#fff}
+    .app{min-height:100%;display:flex;flex-direction:column;max-width:480px;margin:0 auto;background:#000}
+    .topbar{display:flex;justify-content:space-between;align-items:center;padding:12px 14px 8px}
+    .icon{width:42px;height:42px;border:0;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;display:flex;align-items:center;justify-content:center}
+    .icon svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2}
+    .stage{position:relative;flex:1;min-height:58vh;background:#111;overflow:hidden}
+    video#live{width:100%;height:100%;object-fit:cover;display:block;min-height:58vh}
     .front{transform:scaleX(-1)}
-    .row{display:flex;gap:8px;margin:10px 16px}
-    button,.back{flex:1;border:0;border-radius:14px;padding:13px 8px;font:800 14px Assistant,sans-serif}
-    .cam{background:var(--navy);color:#f3e7b8}
-    .gal{background:var(--gold);color:var(--navy)}
-    .rec{background:#8b2e2e;color:#fff}
-    .back{display:block;text-align:center;text-decoration:none;background:#fff;color:var(--navy);margin:8px 16px 0}
+    .modes{display:flex;justify-content:center;gap:18px;padding:10px 0 4px;font-weight:800}
+    .modes button{background:none;border:0;color:rgba(255,255,255,.45);font:800 16px Assistant,sans-serif}
+    .modes button.on{color:#fff;border-bottom:2px solid #e11d2e}
+    .controls{display:flex;align-items:center;justify-content:space-around;padding:8px 24px 18px}
+    .shutter{width:78px;height:78px;border-radius:50%;border:4px solid #fff;background:#e11d2e;box-shadow:0 0 0 6px rgba(225,29,46,.25)}
+    .shutter.rec{animation:pulse 1s infinite;background:#7f1d1d}
+    @keyframes pulse{50%{box-shadow:0 0 0 12px rgba(225,29,46,.15)}}
+    #note{text-align:center;min-height:20px;font-size:13px;color:#ddd;padding:0 12px 8px}
+    .strip{display:flex;gap:8px;overflow-x:auto;padding:0 12px 14px}
+    .strip .item{min-width:72px;position:relative}
+    .strip img,.strip video{width:72px;height:72px;object-fit:cover;border-radius:10px;background:#222;display:block}
+    .strip .del{position:absolute;top:-6px;left:-6px;width:22px;height:22px;border:0;border-radius:50%;background:#e11d2e;color:#fff;font-weight:800}
     .hidden{position:absolute;opacity:0;width:1px;height:1px}
-    #note{text-align:center;color:#5a5346;min-height:24px;padding:6px 16px 4px;font-weight:700}
-    .item{background:#fff;border-radius:16px;margin:10px 16px;padding:8px;text-align:center;box-shadow:0 6px 16px rgba(26,39,68,.08)}
-    .item img,.item video{width:100%;max-height:220px;object-fit:cover;border-radius:12px}
-    .del{background:#f3e8e8;color:#7a2e2e;width:100%;margin-top:8px}
-    .bottom{padding-bottom:18px}
+    a.nav{color:#f3e7b8;text-decoration:none;font-weight:800;font-size:13px}
   </style>
 </head>
 <body>
-<div class="phone">
-  <div class="top">
-    <div class="badge">13</div>
-    <h1>צילום לאלבום</h1>
-    <p class="sub">סלפי או מצלמה אחורית · תמונה או סרטון</p>
+<div class="app">
+  <div class="topbar">
+    <a class="nav" href="./">חזרה</a>
+    <a class="nav" href="album.html">אלבום</a>
   </div>
   <div class="stage"><video id="live" class="front" playsinline autoplay muted></video></div>
-  <div class="row"><button class="cam" id="flip" type="button">החלף למצלמה אחורית</button></div>
-  <div class="row">
-    <button class="cam" id="snap" type="button">צלם והעלה</button>
-    <button class="rec" id="rec" type="button">הקלט סרטון</button>
+  <div class="modes">
+    <button type="button" id="modePhoto" class="on">תמונה</button>
+    <button type="button" id="modeVideo">סרטון</button>
   </div>
-  <div class="row"><button class="gal" id="openGal" type="button">בחירה מהגלריה</button></div>
-  <input id="gal" class="hidden" type="file" accept="image/*,video/*" multiple>
+  <div class="controls">
+    <button class="icon" id="openGal" type="button" aria-label="גלריה">
+      <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 16l-5-5-8 8"/></svg>
+    </button>
+    <button class="shutter" id="shutter" type="button" aria-label="צילום"></button>
+    <button class="icon" id="flip" type="button" aria-label="החלפת מצלמה">
+      <svg viewBox="0 0 24 24"><path d="M4 7h4l2-2h4l2 2h4v12H4z"/><circle cx="12" cy="13" r="3.2"/><path d="M16 4l2 2-2 2"/></svg>
+    </button>
+  </div>
   <p id="note"></p>
-  <div id="list"></div>
-  <div class="bottom">
-    <a class="back" href="album.html">לאלבום המשותף</a>
-    <a class="back" href="./">חזרה לעמוד הראשי</a>
-  </div>
+  <div id="list" class="strip"></div>
+  <input id="gal" class="hidden" type="file" accept="image/*,video/*" multiple>
 </div>
 <script>
 const AUTH='Client-ID 546c25a59c58ad7', HASH='zlu4GEWHMh6vEso';
-const live=document.getElementById('live'), note=document.getElementById('note'), list=document.getElementById('list'), gal=document.getElementById('gal'), flip=document.getElementById('flip');
-let stream=null, recorder=null, chunks=[], facing='user';
+const live=document.getElementById('live'), note=document.getElementById('note'), list=document.getElementById('list');
+const gal=document.getElementById('gal'), flip=document.getElementById('flip'), shutter=document.getElementById('shutter');
+let stream=null, recorder=null, chunks=[], facing='user', mode='photo';
 let owner=localStorage.getItem('shagiv-owner');
 if(!owner){ owner='u'+Math.random().toString(36).slice(2,10); localStorage.setItem('shagiv-owner', owner); }
 function mineIds(){ try{return JSON.parse(localStorage.getItem('shagiv-mine-ids')||'[]');}catch(e){return[];} }
@@ -66,7 +69,7 @@ let items=JSON.parse(localStorage.getItem('shagiv-mine-items')||'[]');
 function say(t){ note.textContent=t; }
 function saveItems(){ localStorage.setItem('shagiv-mine-items', JSON.stringify(items.slice(0,40))); }
 function render(){
-  list.innerHTML=items.map(it=>'<div class="item">'+(it.video?'<video src="'+it.url+'" poster="'+(it.poster||'')+'" controls playsinline></video>':'<img src="'+it.url+'">')+'<button class="del" data-id="'+it.id+'">מחיקת התמונה שלי</button></div>').join('');
+  list.innerHTML=items.map(it=>'<div class="item">'+(it.video?'<video src="'+it.url+'" poster="'+(it.poster||'')+'" muted></video>':'<img src="'+it.url+'">')+'<button class="del" data-id="'+it.id+'">×</button></div>').join('');
   list.querySelectorAll('.del').forEach(b=>b.onclick=()=>delMine(b.dataset.id));
 }
 async function delMine(id){
@@ -92,7 +95,7 @@ function frameBlob(){
   c.width=live.videoWidth||640; c.height=live.videoHeight||480;
   const x=c.getContext('2d');
   if(facing==='user'){ x.translate(c.width,0); x.scale(-1,1); }
-  if(live.videoWidth) x.drawImage(live,0,0); else { x.fillStyle='#1a2744'; x.fillRect(0,0,c.width,c.height); }
+  if(live.videoWidth) x.drawImage(live,0,0); else { x.fillStyle='#111'; x.fillRect(0,0,c.width,c.height); }
   return new Promise(res=>c.toBlob(res,'image/jpeg',0.8));
 }
 async function litterbox(file){
@@ -122,29 +125,36 @@ async function startCamera(){
     stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing}},audio:true});
     live.srcObject=stream; await live.play();
     live.classList.toggle('front', facing==='user');
-    flip.textContent=facing==='user'?'החלף למצלמה אחורית':'החלף לסלפי';
   }catch(e){ say('אשרו הרשאת מצלמה'); }
 }
+function setMode(m){
+  mode=m;
+  document.getElementById('modePhoto').classList.toggle('on', m==='photo');
+  document.getElementById('modeVideo').classList.toggle('on', m==='video');
+}
+document.getElementById('modePhoto').onclick=()=>setMode('photo');
+document.getElementById('modeVideo').onclick=()=>setMode('video');
 flip.onclick=()=>{ facing=facing==='user'?'environment':'user'; startCamera(); };
 document.getElementById('openGal').onclick=()=>gal.click();
-document.getElementById('snap').onclick=async()=>{
+async function snap(){
   if(!live.videoWidth){ await startCamera(); if(!live.videoWidth) return; }
   upload(await frameBlob(),'photo.jpg',false);
-};
-document.getElementById('rec').onclick=async()=>{
+}
+async function recToggle(){
   if(!stream){ await startCamera(); if(!stream) return; }
-  if(recorder && recorder.state==='recording'){ recorder.stop(); return; }
+  if(recorder && recorder.state==='recording'){ recorder.stop(); shutter.classList.remove('rec'); return; }
   chunks=[];
   const mime=['video/mp4','video/webm'].find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t))||'';
   recorder=mime?new MediaRecorder(stream,{mimeType:mime}):new MediaRecorder(stream);
   recorder.ondataavailable=e=>{ if(e.data&&e.data.size) chunks.push(e.data); };
   recorder.onstop=async()=>{
-    document.getElementById('rec').textContent='הקלט סרטון';
+    shutter.classList.remove('rec');
     const type=recorder.mimeType||'video/webm';
     upload(new Blob(chunks,{type}), type.includes('mp4')?'clip.mp4':'clip.webm', true, await frameBlob());
   };
-  recorder.start(); document.getElementById('rec').textContent='עצור הקלטה'; say('מקליט...');
-};
+  recorder.start(); shutter.classList.add('rec'); say('מקליט...');
+}
+shutter.onclick=()=>{ mode==='video'?recToggle():snap(); };
 gal.onchange=()=>{ [...gal.files].forEach(f=>upload(f,f.name,(f.type||'').startsWith('video'))); };
 async function upload(blob,name,video,poster){
   if(!blob||!blob.size) return;
@@ -161,7 +171,7 @@ async function upload(blob,name,video,poster){
       entry={id:data.id,url:data.link,video:false,owner};
     }
     addMine(entry.id); items.unshift(entry); saveItems(); render();
-    say('נשמר באלבום המשותף');
+    say('נשמר באלבום');
   }catch(e){ say('העלאה נכשלה: '+(e.message||e)); }
 }
 render(); startCamera();
