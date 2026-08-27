@@ -2,69 +2,100 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>תמונות וסרטונים · בר המצווה של שגיב</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>תמונות וסרטונים · שגיב</title>
   <style>
     body { margin:0; font-family:Arial,sans-serif; background:#1a2744; color:#2a2418; }
-    .card { max-width:420px; margin:20px auto; background:#f7f1e4; border-radius:24px; padding:22px 18px; text-align:center; }
-    h1 { color:#1a2744; font-size:22px; margin:0 0 8px; }
-    p { color:#5a5346; line-height:1.5; }
-    .hidden { position:absolute; width:1px; height:1px; opacity:0; }
-    .btns { display:flex; flex-direction:column; gap:10px; margin:16px 0; }
-    .btns button, .back { border:0; border-radius:14px; padding:16px; font-size:17px; font-weight:800; cursor:pointer; }
+    .card { max-width:440px; margin:16px auto; background:#f7f1e4; border-radius:24px; padding:16px; }
+    h1 { text-align:center; color:#1a2744; font-size:22px; margin:4px 0 8px; }
+    p { text-align:center; color:#5a5346; }
+    video#live { width:100%; border-radius:16px; background:#000; min-height:220px; object-fit:cover; }
+    .row { display:flex; gap:8px; margin-top:10px; }
+    button, .back { flex:1; border:0; border-radius:14px; padding:14px 8px; font-weight:800; font-size:15px; cursor:pointer; }
     .cam { background:#1a2744; color:#f3e7b8; }
     .gal { background:#c9a227; color:#1a2744; }
-    .share { background:#0ea5e9; color:#fff; display:none; }
-    .back { display:block; text-decoration:none; background:#fff; color:#1a2744; border:1px solid #d7cbb3; margin-top:10px; }
-    #preview { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
-    #preview img, #preview video { width:100%; border-radius:12px; max-height:160px; object-fit:cover; background:#000; }
+    .rec { background:#7a2e2e; color:#fff; }
+    .back { display:block; text-align:center; text-decoration:none; background:#fff; color:#1a2744; margin-top:12px; }
+    .hidden { position:absolute; opacity:0; width:1px; height:1px; }
+    #note { min-height:22px; text-align:center; font-size:14px; font-weight:700; }
+    .item { background:#fff; border-radius:12px; padding:8px; margin-top:8px; text-align:center; }
+    .item img, .item video { width:100%; border-radius:8px; max-height:180px; object-fit:cover; }
+    .item a { display:block; margin-top:6px; font-size:13px; word-break:break-all; }
   </style>
 </head>
 <body>
   <div class="card">
     <h1>תמונות וסרטונים</h1>
-    <p>צלמו עכשיו או בחרו מהגלריה, ואז שלחו למשפחה בוואטסאפ.</p>
-    <input id="cam" class="hidden" type="file" accept="image/*,video/*" capture="environment" />
-    <input id="gal" class="hidden" type="file" accept="image/*,video/*" multiple />
-    <div class="btns">
-      <button class="cam" type="button" id="openCam">פתיחת מצלמה</button>
-      <button class="gal" type="button" id="openGal">בחירה מהגלריה</button>
-      <button class="share" type="button" id="share">שליחה בוואטסאפ</button>
+    <p>המצלמה נפתחת כאן. אחרי צילום הקובץ עולה אוטומטית.</p>
+    <video id="live" playsinline autoplay muted></video>
+    <div class="row">
+      <button class="cam" id="startCam" type="button">הפעלת מצלמה</button>
+      <button class="cam" id="snap" type="button">צלם</button>
     </div>
-    <div id="preview"></div>
+    <div class="row">
+      <button class="rec" id="rec" type="button">הקלט סרטון</button>
+      <button class="gal" id="openGal" type="button">מהגלריה</button>
+    </div>
+    <input id="gal" class="hidden" type="file" accept="image/*,video/*" multiple />
     <p id="note"></p>
+    <div id="list"></div>
     <a class="back" href="./">חזרה לאתר האירוע</a>
   </div>
   <script>
-    const cam=document.getElementById('cam');
-    const gal=document.getElementById('gal');
-    const preview=document.getElementById('preview');
+    const live=document.getElementById('live');
     const note=document.getElementById('note');
-    const shareBtn=document.getElementById('share');
-    let files=[];
-    document.getElementById('openCam').onclick=()=>cam.click();
-    document.getElementById('openGal').onclick=()=>gal.click();
-    function show(list){
-      files=[...list];
-      preview.innerHTML='';
-      files.forEach(f=>{
-        const url=URL.createObjectURL(f);
-        preview.innerHTML += (f.type||'').startsWith('video') ? '<video src="'+url+'" controls></video>' : '<img src="'+url+'" alt="">';
-      });
-      shareBtn.style.display=files.length?'block':'none';
-      note.textContent=files.length?'מוכן לשליחה':'';
-    }
-    cam.onchange=()=>show(cam.files);
-    gal.onchange=()=>show(gal.files);
-    shareBtn.onclick=async()=>{
-      if(!files.length) return;
+    const list=document.getElementById('list');
+    const gal=document.getElementById('gal');
+    let stream=null, recorder=null, chunks=[];
+    function say(t){ note.textContent=t; }
+    async function startCamera(){
       try{
-        if(navigator.canShare && navigator.canShare({files})){
-          await navigator.share({title:'בר המצווה של שגיב', text:'מהערב של שגיב', files});
-          note.textContent='נשלח';
-        } else note.textContent='שלחו ידנית בוואטסאפ מהגלריה';
-      }catch(e){ if(e.name!=='AbortError') note.textContent='אפשר לשלוח ידנית מהגלריה'; }
+        if(stream) stream.getTracks().forEach(t=>t.stop());
+        stream=await navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ ideal:'environment' }, width:{ ideal:1280 }, height:{ ideal:720 } }, audio:true });
+        live.srcObject=stream; await live.play(); say('המצלמה פעילה');
+      }catch(e){
+        try{
+          stream=await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
+          live.srcObject=stream; await live.play(); say('המצלמה פעילה');
+        }catch(err){ say('אשרו הרשאת מצלמה או בחרו מהגלריה.'); }
+      }
+    }
+    document.getElementById('startCam').onclick=startCamera;
+    document.getElementById('openGal').onclick=()=>gal.click();
+    document.getElementById('snap').onclick=async()=>{
+      if(!live.videoWidth){ await startCamera(); return; }
+      const c=document.createElement('canvas');
+      c.width=live.videoWidth; c.height=live.videoHeight;
+      c.getContext('2d').drawImage(live,0,0);
+      c.toBlob(blob=>upload(blob,'photo-'+Date.now()+'.jpg'),'image/jpeg',0.88);
     };
+    document.getElementById('rec').onclick=async()=>{
+      if(!stream){ await startCamera(); if(!stream) return; }
+      if(recorder && recorder.state==='recording'){ recorder.stop(); return; }
+      chunks=[];
+      recorder=new MediaRecorder(stream);
+      recorder.ondataavailable=e=>{ if(e.data.size) chunks.push(e.data); };
+      recorder.onstop=()=>{ const blob=new Blob(chunks,{ type: recorder.mimeType || 'video/webm' }); upload(blob,'video-'+Date.now()+'.webm'); document.getElementById('rec').textContent='הקלט סרטון'; };
+      recorder.start();
+      document.getElementById('rec').textContent='עצור הקלטה';
+      say('מקליט...');
+    };
+    gal.onchange=()=>{ [...gal.files].forEach(f=>upload(f,f.name)); };
+    async function upload(blob, name){
+      say('מעלה את '+name+'...');
+      const fd=new FormData(); fd.append('file', blob, name);
+      try{
+        const res=await fetch('https://tmpfiles.org/api/v1/upload',{ method:'POST', body:fd });
+        const data=await res.json();
+        if(data.status!=='success' || !data.data || !data.data.url){ say('ההעלאה נכשלה, נסו שוב'); return; }
+        const url=String(data.data.url).replace('tmpfiles.org/','tmpfiles.org/dl/');
+        const isVid=/\.(mp4|webm|mov)$/i.test(name) || (blob.type||'').startsWith('video');
+        const preview=isVid?'<video src="'+url+'" controls></video>':'<img src="'+url+'" alt="">';
+        list.insertAdjacentHTML('afterbegin', '<div class="item">'+preview+'<a href="'+url+'" target="_blank" rel="noopener">הקובץ עלה</a></div>');
+        say('הקובץ עלה בהצלחה');
+      }catch(e){ say('לא הצלחנו להעלות. בדקו רשת ונסו שוב.'); }
+    }
+    startCamera();
   </script>
 </body>
 </html>
