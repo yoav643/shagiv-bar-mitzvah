@@ -13,10 +13,15 @@
     a.btn,button.btn{flex:1;text-align:center;text-decoration:none;border:0;border-radius:14px;padding:12px 8px;font-weight:800;font:800 14px Arial;min-width:46%}
     .navy{background:#1a2744;color:#f3e7b8}.gold{background:#c9a227;color:#1a2744}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-    .item{background:#fff;border-radius:12px;overflow:hidden}
-    .item img,.item video{width:100%;height:160px;object-fit:cover;display:block;background:#000}
+    .item{background:#fff;border-radius:12px;overflow:hidden;position:relative}
+    .item img{width:100%;height:160px;object-fit:cover;display:block;background:#ddd}
+    .play{position:absolute;top:58px;left:50%;transform:translateX(-50%);background:rgba(26,39,68,.85);color:#fff;border-radius:20px;padding:6px 12px;font-size:12px;font-weight:800;pointer-events:none}
     .open{display:block;text-align:center;font-size:13px;font-weight:800;padding:8px;background:#f3ead8;color:#1a2744;text-decoration:none}
     .del{width:100%;border:0;background:#eee;color:#7a2e2e;font-weight:800;padding:8px}
+    #player{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:20;align-items:center;justify-content:center;flex-direction:column;padding:16px}
+    #player.show{display:flex}
+    #player video{width:100%;max-width:520px;max-height:70vh;background:#000}
+    #player a,#player button{margin-top:10px;color:#fff;font-weight:800;background:#c9a227;color:#1a2744;border:0;border-radius:12px;padding:12px 16px;text-decoration:none}
   </style>
 </head>
 <body>
@@ -34,6 +39,7 @@
   <div id="grid" class="grid"></div>
   <p id="note"></p>
 </div>
+<div id="player"><video id="pv" controls playsinline></video><a id="pd" href="#" target="_blank" rel="noopener">הורדה / פתיחה</a><button type="button" id="pc">סגירה</button></div>
 <script>
 const ALBUM_ID='LZUxwoK', HASH='zlu4GEWHMh6vEso', AUTH='Client-ID 546c25a59c58ad7';
 let owner=localStorage.getItem('shagiv-owner')||'', onlyMine=false, ALL=[];
@@ -52,17 +58,23 @@ async function rawVideo(url){
   return view;
 }
 const grid=document.getElementById('grid'), note=document.getElementById('note'), mineBtn=document.getElementById('mineBtn');
+const player=document.getElementById('player'), pv=document.getElementById('pv'), pd=document.getElementById('pd');
+function openVid(url){
+  pv.src=url; pd.href=url; player.classList.add('show'); pv.play().catch(()=>{});
+}
+document.getElementById('pc').onclick=()=>{ pv.pause(); player.classList.remove('show'); };
 function draw(){
   const list=onlyMine?ALL.filter(isMine):ALL;
   if(!list.length){ grid.innerHTML='<div style="grid-column:1/-1;text-align:center;font-weight:700;padding:18px">עדיין אין תמונות</div>'; note.textContent=''; return; }
   grid.innerHTML=list.map(it=>{
-    const media=it.video
-      ? ('<video src="'+it.url+'" poster="'+(it.poster||'')+'" controls playsinline></video><a class="open" href="'+it.url+'" target="_blank" rel="noopener">פתיחת / הורדת סרטון</a>')
-      : ('<a href="'+it.url+'" target="_blank" rel="noopener"><img src="'+it.url+'"></a>');
+    const img=it.video?(it.poster||it.url):it.url;
+    const media='<img src="'+img+'" alt="">'+(it.video?'<div class="play">▶ סרטון</div>':'');
+    const open=it.video?'<a class="open" data-play="'+it.url+'" href="'+it.url+'">נגן סרטון</a>':'';
     const del=isMine(it)?'<button class="del" data-id="'+it.id+'">מחיקת התמונה שלי</button>':'';
-    return '<div class="item">'+media+del+'</div>';
+    return '<div class="item" '+(it.video?'data-play="'+it.url+'"':'')+'>'+media+open+del+'</div>';
   }).join('');
-  grid.querySelectorAll('.del').forEach(b=>b.onclick=()=>delOne(b.dataset.id));
+  grid.querySelectorAll('[data-play]').forEach(el=>el.onclick=e=>{ e.preventDefault(); openVid(el.getAttribute('data-play')); });
+  grid.querySelectorAll('.del').forEach(b=>b.onclick=e=>{ e.stopPropagation(); delOne(b.dataset.id); });
   note.textContent=list.length+' פריטים';
 }
 async function load(){
@@ -71,8 +83,8 @@ async function load(){
     const js=await (await fetch('https://api.imgur.com/3/album/'+ALBUM_ID+'/images?t='+Date.now(),{headers:{Authorization:AUTH},cache:'no-store'})).json();
     for(const x of (js.data||[])){
       const meta=parseDesc(x.description||x.title||'');
-      const video=!!(meta.video||String(x.type||'').startsWith('video')||x.mp4);
-      let url=video?(meta.url||x.mp4||x.link):x.link;
+      const video=!!meta.video;
+      let url=video?(meta.url||x.link):x.link;
       if(video) url=await rawVideo(url);
       map.set(x.id,{id:x.id,url,poster:x.link,video,owner:meta.owner});
     }
@@ -88,7 +100,7 @@ async function delOne(id){
 async function zipOf(list,name){
   if(!list.length) return;
   const zip=new JSZip(); let n=0;
-  for(const it of list){ try{ zip.file((it.video?'clip':'pic')+'-'+it.id+(it.video?'.mp4':'.jpg'), await (await fetch(it.url)).blob()); n++; }catch(e){} }
+  for(const it of list){ try{ zip.file((it.video?'clip':'pic')+'-'+it.id+(it.video?'.mp4':'.jpg'), await (await fetch(it.video?it.url:it.poster||it.url)).blob()); n++; }catch(e){} }
   if(!n) return;
   const a=document.createElement('a'); a.href=URL.createObjectURL(await zip.generateAsync({type:'blob'})); a.download=name; a.click();
 }
