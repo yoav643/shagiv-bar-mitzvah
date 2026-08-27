@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#1a2744" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <title>בר המצווה של שגיב פסטינגר — מספר שולחן</title>
+  <title>בר המצווה של שגיב פסטינגר</title>
   <meta property="og:title" content="בר המצווה של שגיב פסטינגר" />
   <meta property="og:image" content="https://wsrv.nl/?url=raw.githubusercontent.com/yoav643/shagiv-bar-mitzvah/main/og-image.svg&output=png&w=1200&h=630" />
   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Frank+Ruhl+Libre:wght@700;900&display=swap" rel="stylesheet" />
@@ -54,6 +54,7 @@
     .gift { margin:0 18px 18px; background:#fff; border-radius:18px; padding:14px; border:1px solid rgba(201,162,39,.3); text-align:center; }
     .pay { display:flex; gap:8px; }
     .pay a { flex:1; text-decoration:none; border-radius:12px; padding:10px 8px; font-weight:800; display:flex; align-items:center; justify-content:center; gap:7px; }
+    .pay a svg { width:22px; height:22px; }
     .pay .bit { background:#00c2e0; color:#0b1d24; }
     .pay .paybox { background:#0ea5e9; color:#fff; }
     .footer { text-align:center; font-size:12.5px; color:#7a7366; padding:0 20px 12px; }
@@ -66,7 +67,6 @@
     .mates ul { list-style:none; font-size:14px; font-weight:700; }
     .mates li { padding:4px 0; border-bottom:1px solid rgba(201,162,39,.18); }
   </style>
-  <script src="/shagiv-bar-mitzvah/app.js"></script>
 </head>
 <body>
 <div class="phone">
@@ -76,7 +76,11 @@
     <h1>שגיב פסטינגר</h1>
     <p class="meta">האירוע מתקיים היום · יום חמישי</p>
     <div class="when">19:30 | 27/08/2026</div>
-    <div class="countdown" id="countdown"></div>
+    <div class="countdown" id="countdown">
+      <div class="cd-box"><b>--</b><span>שעות</span></div>
+      <div class="cd-box"><b>--</b><span>דקות</span></div>
+      <div class="cd-box"><b>--</b><span>שניות</span></div>
+    </div>
     <div class="venue"><strong>אורימא</strong><span>הפלדה 13, באר שבע</span></div>
     <div class="divider"></div>
   </div>
@@ -97,9 +101,10 @@
   </div>
   <div class="gift">
     <h3>רוצים לתת מתנה?</h3>
+    <p>אפשר בביט או בפייבוקס</p>
     <div class="pay">
-      <a class="bit" href="https://www.bitpay.co.il/app/me/0144C12D-C3D3-DF10-F603-8D9B06A7416B362F" target="_blank" rel="noopener">ביט</a>
-      <a class="paybox" href="https://links.payboxapp.com/PNf18qWlW5b" target="_blank" rel="noopener">פייבוקס</a>
+      <a class="bit" href="https://www.bitpay.co.il/app/me/0144C12D-C3D3-DF10-F603-8D9B06A7416B362F" target="_blank" rel="noopener"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#08343b"/><text x="24" y="31" text-anchor="middle" font-size="18" font-weight="800" fill="#00c2e0">bit</text></svg> ביט</a>
+      <a class="paybox" href="https://links.payboxapp.com/PNf18qWlW5b" target="_blank" rel="noopener"><svg viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#fff"/><text x="24" y="32" text-anchor="middle" font-size="22" font-weight="800" fill="#0ea5e9">P</text></svg> פייבוקס</a>
     </div>
   </div>
   <p class="footer">נתראה בשמחה · משפחת פסטינגר</p>
