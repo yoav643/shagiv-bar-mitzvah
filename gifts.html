@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="Cache-Control" content="no-cache" />
   <title>כסף מהאורחים · ניהול</title>
   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;700;800&family=Frank+Ruhl+Libre:wght@700;900&display=swap" rel="stylesheet" />
   <style>
@@ -11,44 +10,43 @@
     *{box-sizing:border-box;margin:0;padding:0}
     body{min-height:100vh;background:#1a2744;font-family:Assistant,Arial,sans-serif;display:flex;justify-content:center;padding:16px}
     .wrap{width:100%;max-width:480px;background:var(--cream);border-radius:24px;padding:16px}
-    h1{text-align:center;font-family:"Frank Ruhl Libre",serif;color:var(--navy);margin-bottom:6px}
+    h1{text-align:center;font-family:"Frank Ruhl Libre",serif;color:var(--navy)}
     .sum{background:#fff;border:1px solid rgba(201,162,39,.35);border-radius:16px;padding:12px;text-align:center;margin:10px 0}
     .sum b{display:block;font-family:"Frank Ruhl Libre",serif;font-size:28px;color:var(--navy)}
-    .sum span{color:#5a5346;font-size:13px}
     .box{background:#fff;border-radius:16px;padding:12px;margin:8px 0;border:1px solid #eadfc8}
     label{display:block;font-size:12px;font-weight:800;color:var(--navy);margin:6px 0 4px}
-    input{width:100%;padding:9px 10px;border-radius:10px;border:1.5px solid #d7cbb3;font:16px Assistant,sans-serif;background:#fff}
+    input{width:100%;padding:9px 10px;border-radius:10px;border:1.5px solid #d7cbb3;font:16px Assistant,sans-serif}
     .grid2{display:grid;grid-template-columns:1fr 90px;gap:8px}
-    .add{width:100%;margin-top:10px;border:0;border-radius:12px;padding:12px;font:800 15px Assistant,sans-serif;background:var(--gold);color:var(--navy)}
-    .filt{display:flex;gap:8px;margin:0 0 12px}
-    .filt button{flex:1;border:0;border-radius:12px;padding:11px 8px;font:800 14px Assistant,sans-serif;background:#fff;color:var(--navy);border:1px solid #d7cbb3}
-    .filt button.on{background:var(--navy);color:#f3e7b8;border-color:var(--navy)}
-    .tbl{font-weight:800;color:var(--navy);margin:14px 0 6px;font-size:14px}
+    .add,.btn{width:100%;border:0;border-radius:12px;padding:12px;font:800 15px Assistant,sans-serif;background:var(--gold);color:var(--navy);margin-top:8px}
+    a.btn{display:block;text-align:center;text-decoration:none;background:var(--navy);color:#f3e7b8;margin:0 0 8px}
+    .filt{display:flex;gap:8px;margin:8px 0 12px}
+    .filt button{flex:1;border:1px solid #d7cbb3;border-radius:12px;padding:11px 8px;font:800 14px Assistant,sans-serif;background:#fff;color:var(--navy)}
+    .filt button.on{background:var(--navy);color:#f3e7b8}
+    .tbl{font-weight:800;color:var(--navy);margin:14px 0 6px}
     .row{background:#fff;border-radius:12px;padding:10px;margin-bottom:8px;border:1px solid #eadfc8}
     .row .top{display:flex;align-items:center;gap:8px}
     .row .name{flex:1;font-weight:800;color:var(--navy)}
-    .row .meta{display:block;font-size:12px;color:#7a7366;font-weight:600}
-    .row .amt{width:92px;direction:ltr;text-align:left;font-weight:700}
+    .row .meta{display:block;font-size:12px;color:#7a7366}
+    .amt{width:92px;direction:ltr;text-align:left;font-weight:700}
     .del{border:0;background:#f3e8e8;color:#7a2e2e;border-radius:10px;padding:8px 10px;font-weight:800;margin-top:8px}
-    a.btn{display:block;text-align:center;text-decoration:none;border-radius:12px;padding:12px 8px;font-weight:800;background:var(--navy);color:#f3e7b8;margin-bottom:8px}
-    #note{text-align:center;color:#5a5346;font-size:13px;margin-top:8px}
+    #note{text-align:center;color:#5a5346;margin-top:8px}
   </style>
 </head>
 <body>
 <div class="wrap">
   <h1>כסף מהאורחים</h1>
   <a class="btn" href="admin.html">חזרה לניהול</a>
-  <div class="sum"><b id="total">0 ₪</b><span id="filled">עדיין לא הוזן סכום</span></div>
+  <div class="sum"><b id="total">0 ₪</b><span id="filled">טוען רשימה</span></div>
   <div class="box">
     <label>הוספת שם</label>
     <input id="newName" placeholder="שם האורח" />
     <div class="grid2">
       <div><label>תיאור</label><input id="newDesc" list="cats" placeholder="למשל חברים יואב" /></div>
-      <div><label>שולחן</label><input id="newTable" inputmode="numeric" placeholder="-" /></div>
+      <div><label>שולחן</label><input id="newTable" inputmode="numeric" /></div>
     </div>
     <button class="add" id="addBtn" type="button">הוספת אורח</button>
   </div>
-  <input id="q" placeholder="חיפוש שם, שולחן או תיאור" style="width:100%;padding:10px 12px;border-radius:12px;border:1.5px solid #d7cbb3;font:16px Assistant,sans-serif;margin:8px 0" />
+  <input id="q" placeholder="חיפוש" style="margin:8px 0" />
   <div class="filt">
     <button type="button" id="allBtn" class="on">הכל</button>
     <button type="button" id="missBtn">בלי סכום</button>
@@ -63,192 +61,140 @@
   <div id="list"></div>
   <p id="note"></p>
 </div>
-<script src="app.js"></script>
 <script>
-const ALBUM='LZUxwoK', HASH='zlu4GEWHMh6vEso', AUTH='Client-ID 546c25a59c58ad7';
-const LS='shagiv-gifts-v2';
+const FILE='guests.json';
+const STORE='https://extendsclass.com/api/json-storage/bin/caecfec';
+const LS='shagiv-gifts-file';
 const note=document.getElementById('note');
+let file={guests:[], extras:[]};
 let filterMode='all';
-let data={gifts:{}, extras:[]};
-let cashIds={};
-let listIds=[];
 function keyOf(g){ return String(g.name||'')+'|'+String(g.table||''); }
 function num(v){ const n=Number(String(v==null?'':v).replace(/[^0-9.]/g,'')); return isFinite(n)&&n>0?n:0; }
-function enc(s){ return encodeURIComponent(s||''); }
-function dec(s){ try{ return decodeURIComponent(s||''); }catch(e){ return s||''; } }
-function rec(k){
-  const v=data.gifts[k];
-  if(v && typeof v==='object') return {amount:num(v.amount), desc:v.desc||''};
-  return {amount:num(v), desc:''};
+function people(){
+  return (file.guests||[]).map(g=>Object.assign({extra:false},g))
+    .concat((file.extras||[]).map(g=>Object.assign({extra:true, guests:g.guests||1},g)));
 }
-function setRec(k, patch){
-  const next=Object.assign({}, rec(k), patch);
-  data.gifts[k]=next;
+function find(k){ return people().find(g=>keyOf(g)===k); }
+function saveLocal(){ localStorage.setItem(LS, JSON.stringify(file)); }
+function score(pack){
+  let n=0;
+  for(const g of (pack.guests||[]).concat(pack.extras||[])) if(num(g.amount)||g.desc) n++;
+  return n+(pack.extras||[]).length;
 }
-function saveLocal(){ localStorage.setItem(LS, JSON.stringify({gifts:data.gifts, extras:data.extras, cashIds, listIds})); }
-function allGuests(){
-  const base=(typeof GUESTS==='undefined'?[]:GUESTS).map(g=>({name:g.name,table:String(g.table||''),guests:g.guests||1,extra:false}));
-  return base.concat((data.extras||[]).map(g=>({name:g.name,table:String(g.table||''),guests:g.guests||1,extra:true})));
+function merge(a,b){
+  const map=new Map();
+  for(const g of (a.guests||[])) map.set(keyOf(g), Object.assign({}, g));
+  for(const g of (b.guests||[])){
+    const k=keyOf(g), cur=map.get(k)||{};
+    map.set(k, Object.assign({}, cur, g, {amount:Math.max(num(cur.amount),num(g.amount)), desc:g.desc||cur.desc||''}));
+  }
+  const extras=[], seen=new Set();
+  for(const g of (a.extras||[]).concat(b.extras||[])){
+    const k=keyOf(g); if(seen.has(k)) continue; seen.add(k); extras.push(g);
+  }
+  return {guests:[...map.values()], extras};
 }
-async function removeId(id){
-  if(!id) return;
-  try{ await fetch('https://api.imgur.com/3/album/'+HASH+'/remove_images',{method:'POST', headers:{Authorization:AUTH}, body:new URLSearchParams({ids:String(id)})}); }catch(e){}
+async function saveRemote(){
+  const body=JSON.stringify(file);
+  try{ await fetch(STORE,{method:'PUT', headers:{'Content-Type':'text/plain'}, body}); return true; }
+  catch(e){
+    try{ await fetch(STORE,{method:'PUT', headers:{'Content-Type':'application/json'}, body}); return true; }
+    catch(e2){ return false; }
+  }
 }
-function tinyBlob(){
-  const c=document.createElement('canvas'); c.width=8; c.height=8;
-  const x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,8,8);
-  return new Promise(res=>c.toBlob(res,'image/jpeg',0.4));
-}
-async function uploadDesc(desc){
-  const blob=await tinyBlob();
-  const fd=new FormData();
-  fd.append('image', new File([blob],'cash.jpg',{type:'image/jpeg'}));
-  fd.append('album', HASH);
-  fd.append('description', desc);
-  const js=await (await fetch('https://api.imgur.com/3/upload',{method:'POST', headers:{Authorization:AUTH}, body:fd})).json();
-  if(!js||!js.success||!js.data||!js.data.id) throw new Error('save');
-  return js.data.id;
-}
-async function persistKey(k, extra){
+async function persist(){
   saveLocal();
-  const r=rec(k);
-  const parts=k.split('|');
-  const name=parts[0]||'', table=parts.slice(1).join('|');
-  const prefix=extra?'CASHX|':'CASH|';
-  note.textContent='שומר בשרת...';
-  try{
-    for(const id of (cashIds[k]||[])) await removeId(id);
-    cashIds[k]=[await uploadDesc(prefix+enc(name)+'|'+enc(table)+'|'+r.amount+'|'+enc(r.desc||''))];
-    saveLocal();
-    note.textContent='נשמר בשרת';
-  }catch(e){ note.textContent='נשמר רק במכשיר'; }
+  totals();
+  note.textContent='שומר...';
+  const ok=await saveRemote();
+  note.textContent=ok?'נשמר מחוץ לאלבום':'נשמר במכשיר';
 }
-async function persistExtras(){
-  saveLocal();
-  note.textContent='שומר שמות בשרת...';
-  try{
-    for(const id of listIds) await removeId(id);
-    listIds=[await uploadDesc('CASHL|'+enc(JSON.stringify(data.extras||[])))];
-    saveLocal();
-    note.textContent='נשמר בשרת';
-  }catch(e){ note.textContent='השם נשמר רק במכשיר'; }
+function setAmt(k, amount, desc){
+  const inG=(file.guests||[]).find(g=>keyOf(g)===k);
+  const inE=(file.extras||[]).find(g=>keyOf(g)===k);
+  const t=inG||inE; if(!t) return;
+  if(amount!=null) t.amount=num(amount);
+  if(desc!=null) t.desc=desc;
 }
 function totals(){
-  const people=allGuests();
-  let sum=0, filled=0;
-  for(const g of people){ if(rec(keyOf(g)).amount){ sum+=rec(keyOf(g)).amount; filled++; } }
+  const p=people(); let sum=0, filled=0;
+  for(const g of p){ if(num(g.amount)){ sum+=num(g.amount); filled++; } }
   document.getElementById('total').textContent=sum.toLocaleString('he-IL')+' ₪';
-  document.getElementById('filled').textContent=filled+' עם סכום · '+(people.length-filled)+' בלי סכום';
-  document.getElementById('missBtn').textContent='בלי סכום ('+(people.length-filled)+')';
+  document.getElementById('filled').textContent=filled+' עם סכום · '+(p.length-filled)+' בלי סכום';
+  document.getElementById('missBtn').textContent='בלי סכום ('+(p.length-filled)+')';
   document.getElementById('hasBtn').textContent='עם סכום ('+filled+')';
-}
-function setFilter(mode){
-  filterMode=mode;
-  document.getElementById('allBtn').classList.toggle('on', mode==='all');
-  document.getElementById('missBtn').classList.toggle('on', mode==='miss');
-  document.getElementById('hasBtn').classList.toggle('on', mode==='has');
-  draw();
 }
 function draw(){
   const q=document.getElementById('q').value.trim();
-  const rows=allGuests().sort((a,b)=>(Number(a.table)||99)-(Number(b.table)||99)||a.name.localeCompare(b.name,'he'));
+  const rows=people().sort((a,b)=>(Number(a.table)||99)-(Number(b.table)||99)||a.name.localeCompare(b.name,'he'));
   const filt=rows.filter(g=>{
-    const r=rec(keyOf(g));
-    if(filterMode==='miss' && r.amount) return false;
-    if(filterMode==='has' && !r.amount) return false;
+    if(filterMode==='miss' && num(g.amount)) return false;
+    if(filterMode==='has' && !num(g.amount)) return false;
     if(!q) return true;
-    return g.name.includes(q) || String(g.table)===q || (r.desc||'').includes(q);
+    return g.name.includes(q)||String(g.table)===q||(g.desc||'').includes(q);
   });
   let html='', last='__';
   for(const g of filt){
-    const k=keyOf(g), r=rec(k);
-    if(g.table!==last){ html+='<div class="tbl">'+(g.table?('שולחן '+g.table):'ללא שולחן')+'</div>'; last=g.table; }
+    const k=keyOf(g);
+    if(String(g.table)!==last){ html+='<div class="tbl">'+(g.table?('שולחן '+g.table):'ללא שולחן')+'</div>'; last=String(g.table); }
     html+='<div class="row"><div class="top"><div class="name">'+g.name+'<span class="meta">'+(g.guests||1)+' אורחים'+(g.extra?' · נוסף':'')+'</span></div>';
-    html+='<input class="amt" data-key="'+k+'" data-extra="'+(g.extra?1:0)+'" inputmode="numeric" placeholder="₪" value="'+(r.amount||'')+'" /></div>';
-    html+='<input class="desc" list="cats" data-desc="'+k+'" data-extra="'+(g.extra?1:0)+'" placeholder="תיאור" value="'+(r.desc||'')+'" />';
+    html+='<input class="amt" data-key="'+k+'" inputmode="numeric" placeholder="₪" value="'+(num(g.amount)||'')+'" /></div>';
+    html+='<input class="desc" list="cats" data-desc="'+k+'" placeholder="תיאור" value="'+(g.desc||'')+'" />';
     if(g.extra) html+='<button class="del" data-del="'+k+'">מחיקת שם</button>';
     html+='</div>';
   }
-  document.getElementById('list').innerHTML=html||'<p style="text-align:center;color:#5a5346">לא נמצאו אורחים</p>';
-  document.querySelectorAll('input.amt').forEach(inp=>{
-    inp.onchange=inp.onblur=()=>{ setRec(inp.dataset.key,{amount:num(inp.value)}); inp.value=rec(inp.dataset.key).amount||''; persistKey(inp.dataset.key, inp.dataset.extra==='1'); };
-  });
-  document.querySelectorAll('input.desc').forEach(inp=>{
-    inp.onchange=inp.onblur=()=>{ setRec(inp.dataset.desc,{desc:inp.value.trim()}); persistKey(inp.dataset.desc, inp.dataset.extra==='1'); };
-  });
-  document.querySelectorAll('[data-del]').forEach(btn=>{
-    btn.onclick=async()=>{
-      if(!confirm('למחוק את השם?')) return;
-      const k=btn.dataset.del;
-      data.extras=(data.extras||[]).filter(g=>keyOf(g)!==k);
-      delete data.gifts[k];
-      for(const id of (cashIds[k]||[])) await removeId(id);
-      delete cashIds[k];
-      await persistExtras(); draw();
-    };
+  document.getElementById('list').innerHTML=html||'<p style="text-align:center">לא נמצאו אורחים</p>';
+  document.querySelectorAll('input.amt').forEach(inp=>inp.onchange=inp.onblur=()=>{ setAmt(inp.dataset.key, inp.value, null); persist(); });
+  document.querySelectorAll('input.desc').forEach(inp=>inp.onchange=inp.onblur=()=>{ setAmt(inp.dataset.desc, null, inp.value.trim()); persist(); });
+  document.querySelectorAll('[data-del]').forEach(btn=>btn.onclick=()=>{
+    if(!confirm('למחוק את השם?')) return;
+    file.extras=(file.extras||[]).filter(g=>keyOf(g)!==btn.dataset.del);
+    persist(); draw();
   });
   totals();
-}
-async function loadServer(){
-  try{
-    const raw=JSON.parse(localStorage.getItem(LS)||'null');
-    if(raw){ data.gifts=raw.gifts||{}; data.extras=raw.extras||[]; cashIds=raw.cashIds||{}; listIds=raw.listIds||[]; }
-  }catch(e){}
-  try{
-    const js=await (await fetch('https://api.imgur.com/3/album/'+ALBUM+'/images?t='+Date.now(),{headers:{Authorization:AUTH},cache:'no-store'})).json();
-    const gifts={}, extras=[], ids={}; const lists=[];
-    for(const x of (js.data||[])){
-      const d=String(x.description||x.title||'');
-      if(d.startsWith('CASHL|')){
-        lists.push(x.id);
-        try{
-          const arr=JSON.parse(dec(d.slice(6)));
-          if(Array.isArray(arr)) extras.push.apply(extras, arr);
-        }catch(e){}
-        continue;
-      }
-      if(!d.startsWith('CASH|') && !d.startsWith('CASHX|')) continue;
-      const extra=d.startsWith('CASHX|');
-      const p=d.split('|');
-      const name=dec(p[1]||''), table=dec(p[2]||''), amount=num(p[3]), desc=dec(p.slice(4).join('|'));
-      const k=name+'|'+table;
-      gifts[k]={amount, desc};
-      ids[k]=(ids[k]||[]).concat([x.id]);
-      if(extra) extras.push({name, table, guests:1});
-    }
-    data.gifts=Object.assign({}, data.gifts, gifts);
-    const seen=new Set((data.extras||[]).map(keyOf));
-    for(const g of extras){
-      const item={name:g.name, table:String(g.table||''), guests:g.guests||1};
-      if(item.name && !seen.has(keyOf(item))){ data.extras.push(item); seen.add(keyOf(item)); }
-    }
-    cashIds=Object.assign({}, cashIds, ids);
-    if(lists.length) listIds=lists;
-    saveLocal();
-    note.textContent='נטען מהשרת';
-  }catch(e){ note.textContent='נטען מהמכשיר'; }
-  draw();
 }
 document.getElementById('addBtn').onclick=async()=>{
   const name=document.getElementById('newName').value.trim();
   const desc=document.getElementById('newDesc').value.trim();
   const table=document.getElementById('newTable').value.trim();
   if(!name){ note.textContent='חסר שם'; return; }
-  if(allGuests().some(g=>g.name===name && String(g.table)===String(table))){ note.textContent='השם כבר קיים'; return; }
-  data.extras=data.extras||[];
-  data.extras.push({name, table, guests:1});
-  if(desc) setRec(name+'|'+table,{desc});
+  if(people().some(g=>g.name===name && String(g.table)===String(table))){ note.textContent='השם כבר קיים'; return; }
+  file.extras=file.extras||[];
+  file.extras.push({name, table, guests:1, amount:0, desc});
   document.getElementById('newName').value='';
-  document.getElementById('addBtn').disabled=true;
-  draw();
-  await persistExtras();
-  await persistKey(name+'|'+table, true);
-  document.getElementById('addBtn').disabled=false;
+  draw(); await persist();
 };
 document.getElementById('q').oninput=draw;
-document.getElementById('allBtn').onclick=()=>setFilter('all');
-document.getElementById('missBtn').onclick=()=>setFilter('miss');
-document.getElementById('hasBtn').onclick=()=>setFilter('has');
-loadServer();
+document.getElementById('allBtn').onclick=()=>{filterMode='all'; document.querySelectorAll('.filt button').forEach(b=>b.classList.remove('on')); document.getElementById('allBtn').classList.add('on'); draw();};
+document.getElementById('missBtn').onclick=()=>{filterMode='miss'; document.querySelectorAll('.filt button').forEach(b=>b.classList.remove('on')); document.getElementById('missBtn').classList.add('on'); draw();};
+document.getElementById('hasBtn').onclick=()=>{filterMode='has'; document.querySelectorAll('.filt button').forEach(b=>b.classList.remove('on')); document.getElementById('hasBtn').classList.add('on'); draw();};
+async function load(){
+  let base={guests:[], extras:[]};
+  try{ base=await (await fetch(FILE+'?t='+Date.now(),{cache:'no-store'})).json(); }catch(e){}
+  let local={guests:[], extras:[]};
+  try{ local=JSON.parse(localStorage.getItem(LS)||'null')||local; }catch(e){}
+  try{
+    const old=JSON.parse(localStorage.getItem('shagiv-gifts-v2')||'null');
+    if(old&&old.gifts){
+      for(const k of Object.keys(old.gifts)){
+        const [name,table]=k.split('|');
+        const v=old.gifts[k]; const amount=v&&typeof v==='object'?num(v.amount):num(v); const desc=v&&v.desc||'';
+        const g=(base.guests||[]).find(x=>x.name===name && String(x.table)===String(table));
+        if(g){ g.amount=Math.max(num(g.amount),amount); if(desc) g.desc=desc; }
+      }
+      if(old.extras) base.extras=(base.extras||[]).concat(old.extras);
+    }
+  }catch(e){}
+  file=merge(base, local);
+  try{
+    const remote=await (await fetch(STORE+'?t='+Date.now(),{cache:'no-store'})).json();
+    if(remote && score(remote)>0) file=merge(file, remote);
+  }catch(e){}
+  saveLocal();
+  if(score(file)>0) saveRemote();
+  note.textContent='נטען מקובץ האורחים';
+  draw();
+}
+load();
 </script>
 </body></html>
