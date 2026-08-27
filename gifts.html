@@ -77,14 +77,22 @@
 <script src="app.js"></script>
 <script>
 const STORE='https://extendsclass.com/api/json-storage/bin/baffbbf';
+const LS='shagiv-gifts-v2';
 const note=document.getElementById('note');
 let filterMode='all';
-let data={gifts:{}, extras:[]};
-try{
-  const raw=JSON.parse(localStorage.getItem('shagiv-gifts')||'{}');
-  if(raw.gifts || raw.extras) data=raw;
-  else data={gifts:raw, extras:[]};
-}catch(e){}
+let data={gifts:{}, extras:[], updated:0};
+function readLocal(){
+  for(const k of [LS,'shagiv-gifts']){
+    try{
+      const raw=JSON.parse(localStorage.getItem(k)||'null');
+      if(!raw) continue;
+      if(raw.gifts || raw.extras) return {gifts:raw.gifts||{}, extras:raw.extras||[], updated:raw.updated||0};
+      if(typeof raw==='object') return {gifts:raw, extras:[], updated:0};
+    }catch(e){}
+  }
+  return {gifts:{}, extras:[], updated:0};
+}
+data=readLocal();
 function keyOf(g){ return (g.name||'')+'|'+(g.table||''); }
 function num(v){ const n=Number(String(v==null?'':v).replace(/[^0-9.]/g,'')); return isFinite(n)&&n>0?n:0; }
 function rec(k){
@@ -92,17 +100,49 @@ function rec(k){
   if(v && typeof v==='object') return {amount:num(v.amount), desc:v.desc||''};
   return {amount:num(v), desc:''};
 }
+function score(pack){
+  let n=0;
+  const g=pack&&pack.gifts||{};
+  for(const k of Object.keys(g)){
+    const v=g[k];
+    if(v && typeof v==='object'){ if(num(v.amount)||v.desc) n++; }
+    else if(num(v)) n++;
+  }
+  return n+(pack.extras||[]).length;
+}
+function mergePack(a,b){
+  const out={gifts:Object.assign({}, a.gifts||{}), extras:(a.extras||[]).slice(), updated:Math.max(a.updated||0,b.updated||0)};
+  const bg=b.gifts||{};
+  for(const k of Object.keys(bg)){
+    const left=out.gifts[k], right=bg[k];
+    const L=(left&&typeof left==='object')?left:{amount:num(left),desc:''};
+    const R=(right&&typeof right==='object')?right:{amount:num(right),desc:''};
+    out.gifts[k]={amount:Math.max(num(L.amount),num(R.amount)), desc:R.desc||L.desc||''};
+  }
+  const seen=new Set((out.extras||[]).map(keyOf));
+  for(const g of (b.extras||[])){ if(!seen.has(keyOf(g))){ out.extras.push(g); seen.add(keyOf(g)); } }
+  return out;
+}
 function setRec(k, patch){
   const cur=rec(k);
   const next=Object.assign({}, cur, patch);
   if(!next.amount && !next.desc) delete data.gifts[k];
   else data.gifts[k]=next;
 }
-function saveLocal(){ localStorage.setItem('shagiv-gifts', JSON.stringify(data)); }
-async function saveRemote(){
-  try{ await fetch(STORE,{method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)}); }catch(e){}
+function saveLocal(){
+  data.updated=Date.now();
+  localStorage.setItem(LS, JSON.stringify(data));
+  localStorage.setItem('shagiv-gifts', JSON.stringify(data));
 }
-function persist(){ saveLocal(); saveRemote(); totals(); note.textContent='נשמר'; }
+async function saveRemote(){
+  const body=JSON.stringify(data);
+  try{
+    await fetch(STORE,{method:'PUT', headers:{'Content-Type':'text/plain'}, body});
+  }catch(e){
+    try{ await fetch(STORE,{method:'PUT', headers:{'Content-Type':'application/json'}, body}); }catch(e2){}
+  }
+}
+function persist(){ saveLocal(); saveRemote(); totals(); note.textContent='נשמר במכשיר'; }
 function allGuests(){
   const base=(typeof GUESTS==='undefined'?[]:GUESTS).map(g=>({name:g.name,table:String(g.table||''),guests:g.guests||1,extra:false}));
   const extras=(data.extras||[]).map(g=>({name:g.name,table:String(g.table||''),guests:g.guests||1,extra:true}));
@@ -181,14 +221,17 @@ document.getElementById('allBtn').onclick=()=>setFilter('all');
 document.getElementById('missBtn').onclick=()=>setFilter('miss');
 document.getElementById('hasBtn').onclick=()=>setFilter('has');
 async function loadRemote(){
+  const local=readLocal();
+  data=local;
   try{
     const js=await (await fetch(STORE+'?t='+Date.now(),{cache:'no-store'})).json();
     if(js && typeof js==='object'){
-      if(js.gifts || js.extras) data={gifts:js.gifts||data.gifts, extras:js.extras||data.extras||[]};
-      else data={gifts:Object.assign({}, js, data.gifts), extras:data.extras||[]};
-      saveLocal();
+      const remote=(js.gifts||js.extras)?js:{gifts:js, extras:[], updated:0};
+      if(score(remote)>0) data=mergePack(local, remote);
     }
   }catch(e){}
+  saveLocal();
+  if(score(data)>0) saveRemote();
   draw();
 }
 loadRemote();
