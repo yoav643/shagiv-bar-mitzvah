@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="Cache-Control" content="no-cache" />
   <title>האלבום המשותף</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
@@ -16,7 +15,7 @@
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
     .item{background:#fff;border-radius:12px;overflow:hidden}
     .item img,.item video{width:100%;height:160px;object-fit:cover;display:block;background:#000}
-    .open{display:block;text-align:center;font-size:13px;font-weight:800;padding:8px;color:#1a2744;text-decoration:none;background:#f3ead8}
+    .open{display:block;text-align:center;font-size:13px;font-weight:800;padding:8px;background:#f3ead8;color:#1a2744;text-decoration:none}
     .del{width:100%;border:0;background:#eee;color:#7a2e2e;font-weight:800;padding:8px}
     .empty{grid-column:1/-1;text-align:center;font-weight:700;padding:18px}
   </style>
@@ -37,71 +36,52 @@
   <p id="note"></p>
 </div>
 <script>
-const ALBUM_ID='LZUxwoK', HASH='zlu4GEWHMh6vEso', AUTH='Client-ID 546c25a59c58ad7';
+const STORE='https://extendsclass.com/api/json-storage/bin/bacfbbe';
+const HASH='zlu4GEWHMh6vEso', AUTH='Client-ID 546c25a59c58ad7';
 const q=new URLSearchParams(location.search);
-let owner=q.get('me') || localStorage.getItem('shagiv-owner') || '';
+let owner=q.get('me')||localStorage.getItem('shagiv-owner')||'';
 if(q.get('me')) localStorage.setItem('shagiv-owner', q.get('me'));
-let onlyMine=false;
+let onlyMine=false, ALL=[];
 function mineIds(){ try{return JSON.parse(localStorage.getItem('shagiv-mine-ids')||'[]');}catch(e){return[];} }
 const grid=document.getElementById('grid'), note=document.getElementById('note'), mineBtn=document.getElementById('mineBtn');
-let ALL=[];
-function parseDesc(d){ d=String(d||''); if(d.startsWith('VID|')){ const p=d.split('|'); return {video:true, owner:p[1]||'', url:p.slice(2).join('|')}; } return {video:false, owner:d, url:''}; }
-function isMine(it){ return (it.owner && owner && it.owner===owner) || mineIds().includes(it.id); }
-function shown(){ const list=onlyMine?ALL.filter(isMine):ALL; return list; }
-function labelMine(){ mineBtn.textContent=onlyMine?'הצג את הכל':'הצג רק מה שצילמתי'; }
-async function playable(url){
-  if(!url || url.indexOf('tmpfiles.org')<0) return url;
-  if(/\/dl\/[^/]+\/[^/]+\//.test(url)) return url;
-  const view=url.replace('/dl/','/');
-  try{
-    const page=await (await fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(view))).text();
-    const m=page.match(/https:\/\/tmpfiles\.org\/dl\/[^"'\s<]+/);
-    if(m) return m[0];
-  }catch(e){}
-  return view;
-}
+function isMine(it){ return (it.owner&&owner&&it.owner===owner) || mineIds().includes(it.id); }
+function shown(){ return onlyMine?ALL.filter(isMine):ALL; }
 function draw(){
   const list=shown();
-  if(!list.length){ grid.innerHTML='<div class="empty">'+(onlyMine?'לא נמצאו פריטים שלכם. לחצ\u05d5 הצג את הכל.':'עדיין אין תמונות')+'</div>'; return; }
+  if(!list.length){ grid.innerHTML='<div class="empty">'+(onlyMine?'אין פריטים שלכם כאן':'עדיין אין תמונות')+'</div>'; note.textContent=''; return; }
   grid.innerHTML=list.map(it=>{
-    const media=it.video
-      ? '<video src="'+it.url+'" controls playsinline></video><a class="open" href="'+it.url+'" target="_blank" rel="noopener">פתיחת סרטון</a>'
-      : '<a href="'+it.url+'" target="_blank" rel="noopener"><img src="'+it.url+'"></a>';
+    const media=it.video?('<video src="'+it.url+'" controls playsinline></video><a class="open" href="'+it.url+'" target="_blank" rel="noopener">פתיחת סרטון</a>'):('<a href="'+it.url+'" target="_blank" rel="noopener"><img src="'+it.url+'"></a>');
     const del=isMine(it)?'<button class="del" data-id="'+it.id+'">מחיקת התמונה שלי</button>':'';
     return '<div class="item">'+media+del+'</div>';
   }).join('');
   grid.querySelectorAll('.del').forEach(b=>b.onclick=()=>delOne(b.dataset.id));
-  note.textContent=list.length+' פריטים באלבום';
+  note.textContent=list.length+' פריטים';
+}
+async function readStore(){ try{ return await (await fetch(STORE+'?t='+Date.now(),{cache:'no-store'})).json(); }catch(e){ return {}; } }
+async function writeStore(data){ await fetch(STORE,{method:'PUT', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(data)}); }
+async function load(){
+  const data=await readStore();
+  ALL=(data.items||[]).filter(x=>x&&x.url);
+  draw();
 }
 async function delOne(id){
   if(!confirm('למחוק?')) return;
+  const data=await readStore();
+  data.items=(data.items||[]).filter(x=>x.id!==id);
+  await writeStore(data);
   try{ await fetch('https://api.imgur.com/3/album/'+HASH+'/remove_images',{method:'POST', headers:{Authorization:AUTH}, body:new URLSearchParams({ids:id})}); }catch(e){}
-  setTimeout(load,700);
+  load();
 }
-async function load(){
-  try{
-    const res=await fetch('https://api.imgur.com/3/album/'+ALBUM_ID+'/images?t='+Date.now(),{headers:{Authorization:AUTH},cache:'no-store'});
-    const js=await res.json();
-    ALL=await Promise.all((js.data||[]).map(async x=>{
-      const meta=parseDesc(x.description||x.title||'');
-      const video=!!(meta.video || String(x.type||'').startsWith('video') || x.mp4);
-      let url=video ? (meta.url||x.mp4||x.link) : x.link;
-      if(video) url=await playable(url);
-      return {id:x.id, url, video, owner:meta.owner};
-    }));
-    draw();
-  }catch(e){ note.textContent='שגיאה בטעינת האלבום'; }
-}
-async function zipOf(list, name){
-  if(!list.length){ note.textContent='אין קבצים'; return; }
+async function zipOf(list,name){
+  if(!list.length) return;
   const zip=new JSZip(); let n=0;
   for(const it of list){ try{ zip.file((it.video?'clip':'pic')+'-'+it.id+(it.video?'.mp4':'.jpg'), await (await fetch(it.url)).blob()); n++; }catch(e){} }
   if(!n) return;
   const a=document.createElement('a'); a.href=URL.createObjectURL(await zip.generateAsync({type:'blob'})); a.download=name; a.click();
 }
-mineBtn.onclick=()=>{ onlyMine=!onlyMine; labelMine(); draw(); };
-document.getElementById('dlMine').onclick=()=>zipOf(ALL.filter(isMine), 'shagiv-mine.zip');
-document.getElementById('dl').onclick=()=>zipOf(ALL, 'album-shagiv.zip');
-labelMine(); load(); setInterval(load,6000);
+mineBtn.onclick=()=>{ onlyMine=!onlyMine; mineBtn.textContent=onlyMine?'הצג את הכל':'הצג רק מה שצילמתי'; draw(); };
+document.getElementById('dlMine').onclick=()=>zipOf(ALL.filter(isMine),'shagiv-mine.zip');
+document.getElementById('dl').onclick=()=>zipOf(ALL,'album-shagiv.zip');
+load(); setInterval(load,5000);
 </script>
 </body></html>
