@@ -63,11 +63,6 @@ async function publish(entry){
 }
 async function delMine(id){
   try{ await fetch('https://api.imgur.com/3/album/'+HASH+'/remove_images',{method:'POST', headers:{Authorization:AUTH}, body:new URLSearchParams({ids:id})}); }catch(e){}
-  try{
-    const data=await (await fetch(STORE+'?t='+Date.now(),{cache:'no-store'})).json();
-    data.items=(data.items||[]).filter(x=>x.id!==id);
-    await fetch(STORE,{method:'PUT', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(data)});
-  }catch(e){}
   items=items.filter(x=>x.id!==id); saveItems(); render();
 }
 async function imgurImage(file, desc){
@@ -77,9 +72,14 @@ async function imgurImage(file, desc){
   if(!j||!j.success||!j.data||!j.data.id) throw new Error((j&&j.data&&j.data.error)||'העלאת תמונה נכשלה');
   return j.data;
 }
-function tinyPng(){
-  const c=document.createElement('canvas'); c.width=8; c.height=8; const x=c.getContext('2d'); x.fillStyle='#1a2744'; x.fillRect(0,0,8,8);
-  return new Promise(res=>c.toBlob(res,'image/png'));
+function frameBlob(){
+  const c=document.createElement('canvas');
+  c.width=live.videoWidth||640; c.height=live.videoHeight||480;
+  const x=c.getContext('2d');
+  if(facing==='user'){ x.translate(c.width,0); x.scale(-1,1); }
+  if(live.videoWidth) x.drawImage(live,0,0);
+  else { x.fillStyle='#1a2744'; x.fillRect(0,0,c.width,c.height); }
+  return new Promise(res=>c.toBlob(res,'image/jpeg',0.8));
 }
 async function hostVideo(file){
   const fd=new FormData(); fd.append('file', file);
@@ -102,38 +102,40 @@ flip.onclick=()=>{ facing=facing==='user'?'environment':'user'; startCamera(); }
 document.getElementById('openGal').onclick=()=>gal.click();
 document.getElementById('snap').onclick=async()=>{
   if(!live.videoWidth){ await startCamera(); if(!live.videoWidth) return; }
-  const c=document.createElement('canvas'); c.width=live.videoWidth; c.height=live.videoHeight;
-  const x=c.getContext('2d'); if(facing==='user'){ x.translate(c.width,0); x.scale(-1,1); } x.drawImage(live,0,0);
-  upload(await new Promise(res=>c.toBlob(res,'image/jpeg',0.85)),'photo.jpg',false);
+  upload(await frameBlob(),'photo.jpg',false);
 };
 document.getElementById('rec').onclick=async()=>{
   if(!stream){ await startCamera(); if(!stream) return; }
   if(recorder && recorder.state==='recording'){ recorder.stop(); return; }
-  chunks=[]; recorder=new MediaRecorder(stream);
+  chunks=[];
+  const mime=['video/mp4','video/webm'].find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t))||'';
+  recorder=mime?new MediaRecorder(stream,{mimeType:mime}):new MediaRecorder(stream);
   recorder.ondataavailable=e=>{ if(e.data&&e.data.size) chunks.push(e.data); };
-  recorder.onstop=()=>{ upload(new Blob(chunks,{type:recorder.mimeType||'video/webm'}),'clip.webm', true); document.getElementById('rec').textContent='הקלט סרטון'; };
+  recorder.onstop=async()=>{
+    document.getElementById('rec').textContent='הקלט סרטון';
+    const type=recorder.mimeType||'video/webm';
+    const poster=await frameBlob();
+    upload(new Blob(chunks,{type}), type.includes('mp4')?'clip.mp4':'clip.webm', true, poster);
+  };
   recorder.start(); document.getElementById('rec').textContent='עצור הקלטה'; say('מקליט...');
 };
 gal.onchange=()=>{ [...gal.files].forEach(f=>upload(f,f.name,(f.type||'').startsWith('video'))); };
-async function upload(blob,name,video){
+async function upload(blob,name,video,poster){
   if(!blob||!blob.size) return;
   say(video?'מעלה סרטון...':'מעלה תמונה...');
   try{
     let entry;
     if(video){
       const url=await hostVideo(new File([blob],name,{type:blob.type||'video/webm'}));
-      let id='v'+Date.now();
-      try{
-        const mark=await imgurImage(new File([await tinyPng()],'m.png',{type:'image/png'}), 'VID|'+owner+'|'+url);
-        id=mark.id;
-      }catch(e){}
-      entry={id,url,video:true,owner};
+      const thumb=poster||await frameBlob();
+      const data=await imgurImage(new File([thumb],'poster.jpg',{type:'image/jpeg'}), 'VID|'+owner+'|'+url);
+      entry={id:data.id,url,video:true,owner};
     } else {
       const data=await imgurImage(new File([blob],name,{type:blob.type||'image/jpeg'}), owner);
       entry={id:data.id,url:data.link,video:false,owner};
     }
     addMine(entry.id); items.unshift(entry); saveItems(); render();
-    await publish(entry);
+    publish(entry);
     say('נשמר באלבום המשותף');
   }catch(e){ say('העלאה נכשלה: '+(e.message||e)); }
 }
