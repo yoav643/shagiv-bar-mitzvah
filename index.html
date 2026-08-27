@@ -18,3 +18,219 @@
   <meta name="twitter:title" content="בר המצווה של שגיב פסטינגר" />
   <meta name="twitter:description" content="לחצו כדי למצוא את מספר השולחן" />
   <meta name="twitter:image" content="https://wsrv.nl/?url=raw.githubusercontent.com/yoav643/shagiv-bar-mitzvah/main/og-image.svg&output=png&w=1200&h=630" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Frank+Ruhl+Libre:wght@500;700;900&display=swap" rel="stylesheet" />
+  <style>
+    :root { --navy:#1a2744; --gold:#c9a227; --gold-light:#e8d48b; --cream:#f7f1e4; --ink:#2a2418; --white:#fffdf8; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    html,body { min-height:100%; background:radial-gradient(ellipse at top,#2c3d62 0%,var(--navy) 55%,#10182a 100%); color:var(--ink); font-family:"Assistant","Segoe UI",Tahoma,sans-serif; }
+    body { display:flex; justify-content:center; padding:18px 12px 40px; }
+    .phone { width:100%; max-width:440px; background:var(--cream); border-radius:28px; overflow:hidden; box-shadow:0 0 0 8px var(--navy),0 24px 60px rgba(0,0,0,.45); }
+    .top { text-align:center; padding:24px 22px 14px; background:linear-gradient(180deg,rgba(26,39,68,.08) 0%,transparent 40%),var(--cream); }
+    .garland { font-size:22px; letter-spacing:3px; }
+    .badge { width:72px; height:72px; margin:8px auto 10px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#3a5280,#1a2744 70%); color:#f3e7b8; display:flex; align-items:center; justify-content:center; font-family:"Frank Ruhl Libre",serif; font-weight:900; font-size:34px; border:3px solid var(--gold-light); }
+    .kicker { font-size:14px; color:#4a4336; line-height:1.5; }
+    h1 { font-family:"Frank Ruhl Libre",serif; font-weight:900; font-size:26px; color:var(--navy); margin:6px 0 2px; }
+    .meta { font-size:13.5px; color:#5a5346; }
+    .when { display:inline-flex; align-items:center; gap:8px; margin-top:10px; background:var(--white); border:1px solid rgba(201,162,39,.35); border-radius:999px; padding:6px 12px; font-weight:700; color:var(--navy); font-size:13px; }
+    .venue { margin-top:10px; }
+    .venue strong { display:block; font-family:"Frank Ruhl Libre",serif; font-size:20px; color:var(--navy); }
+    .venue span { font-size:13px; color:#5a5346; }
+    .divider { height:1px; margin:14px 28px 0; background:linear-gradient(90deg,transparent,var(--gold),transparent); }
+    .card { padding:18px 18px 24px; }
+    .card h2 { text-align:center; font-size:17px; font-weight:800; color:var(--navy); margin-bottom:4px; }
+    .hint { text-align:center; font-size:13px; color:#6b6456; margin-bottom:14px; }
+    label { display:block; font-size:13px; font-weight:700; color:var(--navy); margin-bottom:6px; }
+    .input-row { display:flex; gap:8px; }
+    input[type="tel"] { flex:1; font-family:inherit; font-size:18px; padding:12px; border-radius:14px; border:1.5px solid #d7cbb3; background:var(--white); color:var(--navy); outline:none; direction:ltr; text-align:left; }
+    input[type="tel"]:focus { border-color:var(--gold); box-shadow:0 0 0 4px rgba(201,162,39,.18); }
+    button { font-family:inherit; font-weight:800; font-size:16px; border:0; border-radius:14px; padding:0 16px; background:linear-gradient(180deg,#2b3d63,var(--navy)); color:var(--gold-light); cursor:pointer; min-width:84px; }
+    .result { margin-top:16px; }
+    .box { background:var(--white); border-radius:18px; padding:16px 14px 12px; text-align:center; border:1px solid rgba(201,162,39,.3); animation:pop .28s ease; }
+    @keyframes pop { from { transform:translateY(8px); opacity:0; } to { transform:none; opacity:1; } }
+    .box .name { font-weight:800; font-size:19px; color:var(--navy); }
+    .box .party { font-size:13.5px; color:#6b6456; margin-top:3px; }
+    .table-num { margin-top:8px; font-family:"Frank Ruhl Libre",serif; font-weight:900; font-size:48px; line-height:1; color:var(--navy); }
+    .table-label { font-size:12px; font-weight:700; letter-spacing:.08em; color:var(--gold); }
+    .error { background:#fff6f2; border-color:#e8b4a4; color:#7a3a2a; font-weight:700; padding:16px; }
+    .map-wrap { margin-top:12px; background:#f3ead8; border-radius:16px; padding:10px 8px 8px; border:1px solid rgba(201,162,39,.25); }
+    .map-title { font-size:13px; font-weight:800; color:var(--navy); margin-bottom:6px; }
+    .floor { width:100%; height:auto; display:block; }
+    .tbl { fill:#fffdf8; stroke:#1a2744; stroke-width:1.6; }
+    .tbl-hi { fill:#c9a227; stroke:#1a2744; stroke-width:2.4; }
+    .tbl-txt { font-family:"Frank Ruhl Libre",serif; font-size:13px; font-weight:700; fill:#1a2744; text-anchor:middle; dominant-baseline:middle; }
+    .zone { fill:#e8dfcc; stroke:#8a7d62; stroke-width:1; }
+    .zone-txt { font-family:Assistant,sans-serif; font-size:9px; font-weight:800; fill:#5a5346; text-anchor:middle; }
+    .wall { stroke:#1a2744; stroke-width:3; fill:none; }
+    .dance { fill:none; stroke:#c9b57a; stroke-width:1.4; stroke-dasharray:4 3; }
+    .arrow { fill:none; stroke:#1a2744; stroke-width:1.6; }
+    .gift { margin: 0 18px 18px; background: var(--white); border-radius: 18px; padding: 14px 14px 16px; border: 1px solid rgba(201,162,39,.3); text-align: center; }
+    .gift h3 { font-size: 16px; color: var(--navy); margin-bottom: 4px; }
+    .gift p { font-size: 13px; color: #6b6456; margin-bottom: 12px; }
+    .pay { display: flex; gap: 8px; }
+    .pay a { flex: 1; text-decoration: none; border-radius: 12px; padding: 10px 8px; font-weight: 800; font-size: 13.5px; display: flex; align-items: center; justify-content: center; gap: 7px; }
+    .pay a svg { width: 22px; height: 22px; flex-shrink: 0; }
+    .pay .bit { background: #00c2e0; color: #0b1d24; }
+    .pay .paybox { background: #0ea5e9; color: #fff; }
+    .footer { text-align:center; font-size:12.5px; color:#7a7366; padding:0 20px 12px; }
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <div class="top">
+      <div class="garland">✦ 🌿 ✦ 🌿 ✦</div>
+      <div class="badge">13</div>
+      <p class="kicker">משפחה וחברים יקרים, ברוכים הבאים<br>לאירוע בר המצווה של</p>
+      <h1>שגיב פסטינגר</h1>
+      <p class="meta">האירוע מתקיים היום · יום חמישי</p>
+      <div class="when">📅 19:30 | 27/08/2026</div>
+      <div class="venue"><strong>אורימא</strong><span>הפלדה 13, באר שבע</span></div>
+      <div class="divider"></div>
+    </div>
+    <div class="card">
+      <h2>מה מספר השולחן שלי?</h2>
+      <p class="hint">הקלידו מספר טלפון של אחד מבני המשפחה ברשימה</p>
+      <label for="phone">מספר טלפון</label>
+      <div class="input-row">
+        <input id="phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="0501234567" maxlength="15" />
+        <button type="button" id="go">חיפוש</button>
+      </div>
+      <div class="result" id="result" aria-live="polite"></div>
+    </div>
+    <div class="gift">
+      <h3>רוצים לתת מתנה?</h3>
+      <p>אפשר בביט או בפייבוקס</p>
+      <div class="pay">
+        <a class="bit" href="https://www.bitpay.co.il/app/me/0144C12D-C3D3-DF10-F603-8D9B06A7416B362F" target="_blank" rel="noopener">
+          <svg viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="12" fill="#08343b"/><text x="24" y="31" text-anchor="middle" font-family="Assistant,Arial,sans-serif" font-size="18" font-weight="800" fill="#00c2e0">bit</text></svg>
+          ביט
+        </a>
+        <a class="paybox" href="https://links.payboxapp.com/PNf18qWlW5b" target="_blank" rel="noopener">
+          <svg viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="12" fill="#fff"/><text x="24" y="32" text-anchor="middle" font-family="Assistant,Arial,sans-serif" font-size="22" font-weight="800" fill="#0ea5e9">P</text></svg>
+          פייבוקס
+        </a>
+      </div>
+    </div>
+    <p class="footer">נתראה בשמחה · משפחת פסטינגר</p>
+  </div>
+  <script>
+    const GUESTS = [
+      {name:"ברוך ערן",table:"1",phones:["0524377333"],guests:1},
+      {name:"דוד רענן",table:"1",phones:["0524050761"],guests:1},
+      {name:"טקטוביץ יאיר",table:"1",phones:["0555024824"],guests:1},
+      {name:"יואב אמיר",table:"1",phones:["0507761779"],guests:1},
+      {name:"יוסף איתי",table:"1",phones:["0525564804"],guests:1},
+      {name:"מוסייב גלוריה",table:"1",phones:["0544232912"],guests:1},
+      {name:"מכלוף תמי",table:"1",phones:["0507527955"],guests:1},
+      {name:"מלכה מור",table:"1",phones:["0545959884"],guests:1},
+      {name:"משיקר אורן",table:"1",phones:["0523737078"],guests:1},
+      {name:"משפחת אלימלך",table:"2",phones:["0502883378","0587474184"],guests:3},
+      {name:"משפחת רסיוק",table:"2",phones:["0525758480","0546666478"],guests:5},
+      {name:"עמרן נתנאל",table:"2",phones:["0539309294"],guests:2},
+      {name:"עשור יוספי",table:"2",phones:["0523508065"],guests:1},
+      {name:"פלדמן יהודית",table:"2",phones:["0505716133"],guests:1},
+      {name:"קרפוב טמילה",table:"2",phones:["0526644517"],guests:1},
+      {name:"שמואלוביץ דן",table:"2",phones:["0504215000"],guests:1},
+      {name:"תותחני יאיר",table:"2",phones:["0522509782"],guests:1},
+      {name:"וינברג מקסי",table:"3",phones:["0502424615"],guests:1},
+      {name:"מיארה אבי",table:"3",phones:["0538813337"],guests:1},
+      {name:"משפחת וולצ'יק",table:"3",phones:["0542128345","0504883391"],guests:4},
+      {name:"משפחת פלדמן זאגא",table:"3",phones:["0547706223"],guests:4},
+      {name:"משפחת פרקש",table:"3",phones:["0528843171","0525419035"],guests:4},
+      {name:"משפחת קושלביץ",table:"4",phones:["0508841605","0585213331"],guests:4},
+      {name:"משפחת קלימוק",table:"4",phones:["0524596899","0544418004"],guests:4},
+      {name:"פלדמן שחר",table:"4",phones:["0505716639"],guests:1},
+      {name:"קושילביץ שירן",table:"4",phones:["0526052258"],guests:1},
+      {name:"אברג'יל ליהי",table:"5",phones:["0546599831"],guests:1},
+      {name:"בן משה תמר",table:"5",phones:["0504899509"],guests:1},
+      {name:"ברוכוב ביאטה",table:"5",phones:["0527555792"],guests:1},
+      {name:"ברשדסקי אליסה",table:"5",phones:["0547890627"],guests:1},
+      {name:"גולדנר שרה",table:"5",phones:["0546811986"],guests:1},
+      {name:"זטולה אינה",table:"5",phones:["0524865673"],guests:1},
+      {name:"זיכרמן בר",table:"5",phones:["0526055103"],guests:1},
+      {name:"מליכוב תמרה",table:"5",phones:["0528555089"],guests:1},
+      {name:"סרודי רענן",table:"5",phones:["0526330611"],guests:1},
+      {name:"פנחס שרית",table:"5",phones:["0505777510"],guests:1},
+      {name:"שגב אלון",table:"5",phones:["0537763312"],guests:1},
+      {name:"גרביץ שי",table:"6",phones:["0509009891"],guests:3},
+      {name:"גרובשטיין עופר",table:"6",phones:["0546765251"],guests:1},
+      {name:"טרפלר אלינה",table:"6",phones:["0542116489"],guests:1},
+      {name:"נווה הלנה ונדב",table:"6",phones:["0524553123"],guests:5},
+      {name:"נעמן קארין ורפאל",table:"6",phones:["0503701400"],guests:2},
+      {name:"רוזנשטיין קרן",table:"6",phones:["0544821352"],guests:1},
+      {name:"איליה אבלין",table:"7",phones:["0505964356"],guests:1},
+      {name:"דניאל ענת",table:"7",phones:["0502889171"],guests:4},
+      {name:"דניאל שמוליק",table:"7",phones:["0524708634"],guests:1},
+      {name:"יעקב אליהו",table:"7",phones:["0527929518"],guests:1},
+      {name:"יעקב יעקב",table:"7",phones:["0522749416"],guests:1},
+      {name:"יעקב ניצן",table:"7",phones:["0506282772"],guests:1},
+      {name:"מני יורם ומוניקה",table:"7",phones:["0523932777"],guests:2},
+      {name:"אלוש אבי",table:"8",phones:["0547207070"],guests:1},
+      {name:"בר קובי ואיילת",table:"8",phones:["0548032609","0542270694"],guests:2},
+      {name:"האס איריס",table:"8",phones:["0545654799"],guests:2},
+      {name:"מאני שושי",table:"8",phones:["0546615176"],guests:1},
+      {name:"מימון יוסי",table:"8",phones:["0506650222"],guests:1},
+      {name:"מני תאיר",table:"8",phones:["0544449822"],guests:1},
+      {name:"עובדיה דרור",table:"8",phones:["0584585766"],guests:1},
+      {name:"עובדיה שלמה",table:"8",phones:["0523275801"],guests:2},
+      {name:"אזוט פלישה ויחיאל",table:"9",phones:["0502900133"],guests:2},
+      {name:"פסטינגר גיל",table:"9",phones:["0548882129"],guests:1},
+      {name:"פסטינגר יפתח",table:"9",phones:["0544488150","0504496105"],guests:2},
+      {name:"פסטינגר נעמה וניב",table:"9",phones:["0544744143","0545448188"],guests:6},
+      {name:"גבעון רן וענת",table:"10",phones:["0522766777"],guests:2},
+      {name:"דניאל יורם ואביבה",table:"10",phones:["0547662992"],guests:2},
+      {name:"פסטינגר דור ושיר",table:"10",phones:["0547825766","0547664262"],guests:3},
+      {name:"צביה ועדי וייסמרק",table:"10",phones:["0523991822"],guests:2},
+      {name:"קרפ מיכל",table:"10",phones:["0523382096"],guests:1},
+      {name:"שמש תמי",table:"10",phones:["0522766444"],guests:1},
+      {name:"שרבף דנה",table:"10",phones:["0524713199"],guests:1}
+    ];
+    const TABLES = {
+      "1":{x:28,y:168,w:28,h:48},"2":{x:28,y:118,w:28,h:48},
+      "3":{x:148,y:168,w:28,h:48},"4":{x:148,y:118,w:28,h:48},
+      "5":{x:22,y:78,w:36,h:28},"6":{x:132,y:72,w:36,h:28},
+      "7":{x:38,y:18,w:36,h:32},"8":{x:92,y:18,w:36,h:32},
+      "9":{x:228,y:16,w:36,h:32},"10":{x:228,y:56,w:36,h:32},
+      "11":{x:228,y:96,w:36,h:32},"12":{x:228,y:136,w:36,h:32},
+      "13":{x:228,y:176,w:36,h:32},"14":{x:228,y:216,w:36,h:32}
+    };
+    function normalize(raw){ if(!raw) return ""; let d=String(raw).replace(/\D/g,""); if(d.startsWith("972")) d="0"+d.slice(3); if(d.length===9 && !d.startsWith("0")) d="0"+d; return d; }
+    function guestsLabel(n){ n=Number(n)||1; if(n===1) return "אורח אחד"; if(n===2) return "2 אורחים"; return n+" אורחים"; }
+    function floorMap(highlight){
+      const hi=String(highlight||"");
+      const rects=Object.keys(TABLES).map(num=>{
+        const t=TABLES[num]; const on=num===hi;
+        return `<rect class="${on?"tbl-hi":"tbl"}" x="${t.x}" y="${t.y}" width="${t.w}" height="${t.h}" rx="4"/><text class="tbl-txt" x="${t.x+t.w/2}" y="${t.y+t.h/2}">${num}</text>`;
+      }).join("");
+      return `<div class="map-wrap"><div class="map-title">מפת האולם · השולחן שלכם מסומן בזהב</div>
+        <svg class="floor" viewBox="0 0 280 270" xmlns="http://www.w3.org/2000/svg">
+          <rect x="1" y="1" width="278" height="268" rx="10" fill="#fbf6ea" stroke="#d7cbb3"/>
+          <ellipse class="dance" cx="108" cy="175" rx="34" ry="26"/>
+          <text class="zone-txt" x="108" y="176">רחבה</text>
+          <rect class="zone" x="86" y="236" width="36" height="18" rx="3"/><text class="zone-txt" x="104" y="247">בר</text>
+          <rect class="zone" x="58" y="236" width="24" height="18" rx="3"/><text class="zone-txt" x="70" y="247">DJ</text>
+          <line class="wall" x1="8" y1="56" x2="148" y2="56"/>
+          <line class="wall" x1="210" y1="8" x2="210" y2="262"/>
+          ${rects}
+          <path class="arrow" d="M42 248 L42 222"/><polygon fill="#1a2744" points="42,216 38,224 46,224"/>
+          <text class="zone-txt" x="42" y="260">כניסה</text>
+        </svg>
+      </div>`;
+    }
+    function search(){
+      const q=normalize(document.getElementById("phone").value);
+      const out=document.getElementById("result");
+      if(q.length<9){ out.innerHTML='<div class="box error">נא להזין מספר טלפון מלא</div>'; return; }
+      const hits=GUESTS.filter(g => (g.phones||[]).some(ph => {
+        const p=normalize(ph);
+        return p===q || (p && q && p.slice(-9)===q.slice(-9));
+      }));
+      if(!hits.length){ out.innerHTML='<div class="box error">לא מצאנו את המספר ברשימה.<br>נסו מספר אחר או פנו לצוות הקבלה.</div>'; return; }
+      out.innerHTML=hits.map(g=>`<div class="box"><div class="name">${g.name}</div><div class="party">${guestsLabel(g.guests)}</div><div class="table-num">${g.table}</div><div class="table-label">מספר שולחן</div>${floorMap(g.table)}</div>`).join("");
+    }
+    document.getElementById("go").addEventListener("click", search);
+    document.getElementById("phone").addEventListener("keydown", e=>{ if(e.key==="Enter") search(); });
+  </script>
+</body>
+</html>
