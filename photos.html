@@ -7,8 +7,7 @@
   <style>
     body { margin:0; font-family:Arial,sans-serif; background:#1a2744; }
     .card { max-width:440px; margin:16px auto; background:#f7f1e4; border-radius:24px; padding:16px; }
-    h1 { text-align:center; color:#1a2744; }
-    p { text-align:center; color:#5a5346; }
+    h1,p { text-align:center; } h1 { color:#1a2744; } p { color:#5a5346; }
     video#live { width:100%; border-radius:16px; background:#000; min-height:220px; object-fit:cover; transform:scaleX(-1); }
     .row { display:flex; gap:8px; margin-top:10px; }
     button,.back { flex:1; border:0; border-radius:14px; padding:14px 8px; font-weight:800; }
@@ -22,7 +21,7 @@
 <body>
   <div class="card">
     <h1>צילום לאלבום</h1>
-    <p>אחרי ההעלאה תוכלו למחוק רק את התמונה שלכם</p>
+    <p>סרטון ותמונה נכנסים לאלבום של כולם</p>
     <video id="live" playsinline autoplay muted></video>
     <div class="row">
       <button class="cam" id="startCam" type="button">הפעלת מצלמה</button>
@@ -39,30 +38,40 @@
   </div>
   <script>
     const live=document.getElementById('live'), note=document.getElementById('note'), gal=document.getElementById('gal');
-    const OWNERS='https://extendsclass.com/api/json-storage/bin/bacfbbe';
+    const STORE='https://extendsclass.com/api/json-storage/bin/bacfbbe';
     let stream=null, recorder=null, chunks=[];
-    let owner=localStorage.getItem('shagiv-owner')||('u'+Math.random().toString(36).slice(2,10));
-    localStorage.setItem('shagiv-owner', owner);
+    let owner=localStorage.getItem('shagiv-owner');
+    if(!owner){ owner='u'+Math.random().toString(36).slice(2,10); localStorage.setItem('shagiv-owner', owner); }
     function say(t){ note.textContent=t; }
-    async function remember(id){
+    async function readStore(){ try{ return await (await fetch(STORE+'?t='+Date.now(),{cache:'no-store'})).json() || {}; }catch(e){ return {}; } }
+    async function writeStore(data){ await fetch(STORE,{method:'PUT', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(data)}); }
+    async function remember(id, extra){
       try{
-        const res=await fetch(OWNERS+'?t='+Date.now(),{cache:'no-store'});
-        const data=await res.json();
-        const owners=data.owners||{};
-        owners[id]=owner;
-        await fetch(OWNERS,{method:'PUT', headers:{'Content-Type':'text/plain'}, body:JSON.stringify({owners})});
+        const data=await readStore();
+        data.owners=data.owners||{}; data.owners[id]=owner;
+        if(extra){ data.extras=data.extras||[]; data.extras.unshift(extra); }
+        await writeStore(data);
       }catch(e){}
     }
-    async function hostFile(file, video){
+    async function uploadCatbox(file){
+      const fd=new FormData();
+      fd.append('reqtype','fileupload');
+      fd.append('fileToUpload', file);
+      const r=await fetch('https://catbox.moe/user/api.php',{method:'POST', body:fd});
+      const url=(await r.text()).trim();
+      if(!url.startsWith('http')) throw new Error(url||'סרטון לא נשמר');
+      return url;
+    }
+    async function uploadImgur(file, video){
       const fd=new FormData();
       fd.append(video?'video':'image', file);
       fd.append('album','zlu4GEWHMh6vEso');
       fd.append('description', owner);
-      const r=await fetch('https://api.imgur.com/3/upload', { method:'POST', headers:{ Authorization:'Client-ID 546c25a59c58ad7' }, body:fd });
+      fd.append('title', owner);
+      const r=await fetch('https://api.imgur.com/3/upload',{method:'POST', headers:{Authorization:'Client-ID 546c25a59c58ad7'}, body:fd});
       const j=await r.json();
-      if(!j || !j.success || !j.data || !j.data.id) throw new Error((j && j.data && j.data.error) || 'העלאה נכשלה');
-      await remember(j.data.id);
-      return j.data.link;
+      if(!j || !j.success || !j.data) throw new Error((j && j.data && j.data.error) || 'העלאת Imgur נכשלה');
+      return j.data;
     }
     async function startCamera(){
       try{
@@ -82,19 +91,35 @@
     document.getElementById('rec').onclick=async()=>{
       if(!stream){ await startCamera(); if(!stream) return; }
       if(recorder && recorder.state==='recording'){ recorder.stop(); return; }
-      chunks=[]; recorder=new MediaRecorder(stream);
+      chunks=[];
+      const mime=['video/mp4','video/webm;codecs=vp8','video/webm'].find(t=>window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t))||'';
+      recorder=mime?new MediaRecorder(stream,{mimeType:mime}):new MediaRecorder(stream);
       recorder.ondataavailable=e=>{ if(e.data && e.data.size) chunks.push(e.data); };
-      recorder.onstop=()=>{ upload(new Blob(chunks,{type:recorder.mimeType||'video/webm'}),'clip.mp4',true); document.getElementById('rec').textContent='הקלט סרטון'; };
+      recorder.onstop=()=>{ const type=recorder.mimeType||'video/webm'; upload(new Blob(chunks,{type}), type.includes('mp4')?'clip.mp4':'clip.webm', true); document.getElementById('rec').textContent='הקלט סרטון'; };
       recorder.start(); document.getElementById('rec').textContent='עצור הקלטה'; say('מקליט...');
     };
     gal.onchange=()=>{ [...gal.files].forEach(f=>upload(f,f.name,(f.type||'').startsWith('video'))); };
     async function upload(blob, name, video){
       if(!blob || !blob.size) return;
-      say('מעלה...');
+      say(video?'מעלה סרטון...':'מעלה תמונה...');
+      const file=new File([blob], name, {type: blob.type || (video?'video/webm':'image/jpeg')});
       try{
-        const file=new File([blob], name, {type: blob.type || (video?'video/mp4':'image/jpeg')});
-        await hostFile(file, video);
-        say('התמונה באלבום. רק אתם תוכלו למחוק אותה.');
+        if(video){
+          try{
+            const data=await uploadImgur(file, true);
+            await remember(data.id);
+            say('הסרטון נשמר באלבום');
+          }catch(e){
+            const url=await uploadCatbox(file);
+            const id='v'+Date.now();
+            await remember(id, {id,url,video:true,owner});
+            say('הסרטון נשמר באלבום');
+          }
+        } else {
+          const data=await uploadImgur(file, false);
+          await remember(data.id);
+          say('התמונה נשמרה באלבום');
+        }
       }catch(e){ say('העלאה נכשלה: '+(e.message||e)); }
     }
     startCamera();

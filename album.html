@@ -6,97 +6,87 @@
   <title>האלבום המשותף · שגיב</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
-    body { margin:0; font-family:Arial,sans-serif; background:#1a2744; color:#2a2418; }
+    body { margin:0; font-family:Arial,sans-serif; background:#1a2744; }
     .wrap { max-width:440px; margin:16px auto; background:#f7f1e4; border-radius:24px; padding:16px; }
-    h1 { text-align:center; color:#1a2744; font-size:22px; margin:6px 0; }
-    p { text-align:center; color:#5a5346; }
-    .row { display:flex; gap:8px; margin:12px 0; flex-wrap:wrap; }
-    a.btn, button.btn { flex:1; text-align:center; text-decoration:none; border-radius:14px; padding:14px 8px; font-weight:800; border:0; font:800 15px Arial,sans-serif; }
+    h1,p { text-align:center; }
+    h1 { color:#1a2744; }
+    p { color:#5a5346; }
+    .row { display:flex; gap:8px; margin:12px 0; }
+    a.btn, button.btn { flex:1; text-align:center; text-decoration:none; border:0; border-radius:14px; padding:14px 8px; font-weight:800; font:800 15px Arial; }
     .navy { background:#1a2744; color:#f3e7b8; }
     .gold { background:#c9a227; color:#1a2744; }
     .grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
     .item { background:#fff; border-radius:12px; overflow:hidden; }
-    .item img, .item video { width:100%; height:160px; object-fit:cover; display:block; background:#ddd; }
-    .empty { text-align:center; padding:24px 8px; font-weight:700; grid-column:1/-1; }
+    .item img,.item video { width:100%; height:160px; object-fit:cover; display:block; background:#ddd; }
     .del { width:100%; border:0; background:#eee; color:#7a2e2e; font-weight:800; padding:8px; }
+    .empty { grid-column:1/-1; text-align:center; font-weight:700; padding:20px; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <h1>האלבום המשותף</h1>
-    <p>כל התמונות והסרטונים שהאורחים העלו</p>
+    <p>מחיקה רק לתמונות שהעליתם מהטלפון הזה</p>
     <div class="row">
-      <a class="btn gold" href="photos.html">להעלות תמונה</a>
+      <a class="btn gold" href="photos.html">להעלות</a>
       <a class="btn navy" href="./">חזרה</a>
     </div>
-    <div class="row">
-      <button class="btn gold" id="dl" type="button">הורדת הכל למחשב</button>
-    </div>
+    <div class="row"><button class="btn gold" id="dl" type="button">הורדת הכל למחשב</button></div>
     <div id="grid" class="grid"></div>
     <p id="note"></p>
   </div>
   <script>
-    const ALBUM_ID='LZUxwoK';
-    const HASH='zlu4GEWHMh6vEso';
-    const CLIENT='Client-ID 546c25a59c58ad7';
-    const OWNERS='https://extendsclass.com/api/json-storage/bin/bacfbbe';
-    const grid=document.getElementById('grid');
-    const note=document.getElementById('note');
-    const dl=document.getElementById('dl');
-    let LAST=[];
-    let owner=localStorage.getItem('shagiv-owner')||('u'+Math.random().toString(36).slice(2,10));
-    localStorage.setItem('shagiv-owner', owner);
-    async function loadOwners(){
-      try{
-        const res=await fetch(OWNERS+'?t='+Date.now(),{cache:'no-store'});
-        const data=await res.json();
-        return data.owners||{};
-      }catch(e){ return {}; }
-    }
+    const ALBUM_ID='LZUxwoK', HASH='zlu4GEWHMh6vEso', CLIENT='Client-ID 546c25a59c58ad7';
+    const STORE='https://extendsclass.com/api/json-storage/bin/bacfbbe';
+    const grid=document.getElementById('grid'), note=document.getElementById('note'), dl=document.getElementById('dl');
+    let LAST=[], owner=localStorage.getItem('shagiv-owner')||'';
+    if(!owner){ owner='u'+Math.random().toString(36).slice(2,10); localStorage.setItem('shagiv-owner', owner); }
+    async function store(){ try{ return await (await fetch(STORE+'?t='+Date.now(),{cache:'no-store'})).json(); }catch(e){ return {}; } }
+    function isMine(it, owners){ return it.owner===owner || (owners&&owners[it.id]===owner); }
     function draw(list, owners){
       LAST=list||[];
-      if(!LAST.length){ grid.innerHTML='<div class="empty">עדיין אין תמונות.</div>'; return; }
+      if(!LAST.length){ grid.innerHTML='<div class="empty">עדיין אין תמונות</div>'; return; }
       grid.innerHTML=LAST.map(it=>{
-        const media=it.video ? '<video src="'+it.url+'" controls playsinline></video>' : '<a href="'+it.url+'" target="_blank" rel="noopener"><img src="'+it.url+'" alt=""></a>';
-        const del=owners[it.id]===owner ? '<button class="del" data-id="'+it.id+'">מחיקת התמונה שלי</button>' : '';
+        const media=it.video?'<video src="'+it.url+'" controls playsinline></video>':'<a href="'+it.url+'" target="_blank" rel="noopener"><img src="'+it.url+'" alt=""></a>';
+        const del=isMine(it,owners)?'<button class="del" data-id="'+it.id+'" data-extra="'+(it.extra?'1':'')+'">מחיקת התמונה שלי</button>':'';
         return '<div class="item">'+media+del+'</div>';
       }).join('');
-      grid.querySelectorAll('.del').forEach(b=>b.onclick=()=>delOne(b.dataset.id));
-      note.textContent=LAST.length+' פריטים · מחיקה רק לתמונות שהעליתם';
+      grid.querySelectorAll('.del').forEach(b=>b.onclick=()=>delOne(b.dataset.id, b.dataset.extra==='1'));
+      note.textContent=LAST.length+' פריטים';
     }
-    async function delOne(id){
+    async function delOne(id, extra){
       if(!confirm('למחוק את התמונה שלכם?')) return;
       note.textContent='מוחק...';
       try{
-        await fetch('https://api.imgur.com/3/album/'+HASH+'/remove_images', { method:'POST', headers:{ Authorization: CLIENT }, body: new URLSearchParams({ids:id}) });
+        if(extra){
+          const data=await store();
+          data.extras=(data.extras||[]).filter(x=>x.id!==id);
+          await fetch(STORE,{method:'PUT', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(data)});
+        } else {
+          await fetch('https://api.imgur.com/3/album/'+HASH+'/remove_images',{method:'POST', headers:{Authorization:CLIENT}, body:new URLSearchParams({ids:id})});
+        }
       }catch(e){}
-      setTimeout(load, 700);
+      setTimeout(load,600);
     }
     async function load(){
       try{
-        const [imgRes, owners]=await Promise.all([
-          fetch('https://api.imgur.com/3/album/'+ALBUM_ID+'/images?t='+Date.now(), { headers:{ Authorization: CLIENT }, cache:'no-store' }),
-          loadOwners()
+        const [imgRes, data]=await Promise.all([
+          fetch('https://api.imgur.com/3/album/'+ALBUM_ID+'/images?t='+Date.now(),{headers:{Authorization:CLIENT},cache:'no-store'}),
+          store()
         ]);
-        const data=await imgRes.json();
-        const imgs=(data.data||[]).map(x=>({ id:x.id, url:x.link, video: String(x.type||'').startsWith('video') || !!x.mp4 })).filter(x=>x.url);
-        draw(imgs, owners);
-      }catch(e){ note.textContent='לא הצלחנו לטעון את האלבום.'; }
+        const js=await imgRes.json();
+        const imgs=(js.data||[]).map(x=>({id:x.id,url:x.link,video:String(x.type||'').startsWith('video')||!!x.mp4,owner:x.description||x.title||'',extra:false}));
+        const extras=(data.extras||[]).map(x=>({id:x.id,url:x.url,video:!!x.video,owner:x.owner||'',extra:true}));
+        draw([...extras, ...imgs], data.owners||{});
+      }catch(e){ note.textContent='שגיאה בטעינה'; }
     }
-    function saveBlob(blob, name){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); }
     dl.onclick=async()=>{
       if(!LAST.length) return;
-      dl.disabled=true;
-      try{
-        const zip=new JSZip(); let ok=0;
-        for(let i=0;i<LAST.length;i++){
-          try{ const res=await fetch(LAST[i].url); zip.file('shagiv-'+(i+1)+'.jpg', await res.blob()); ok++; }catch(e){}
-        }
-        if(ok) saveBlob(await zip.generateAsync({type:'blob'}), 'album-shagiv.zip');
-      }catch(e){}
-      dl.disabled=false; dl.textContent='הורדת הכל למחשב';
+      const zip=new JSZip(); let n=0;
+      for(const it of LAST){ try{ zip.file((it.video?'clip':'pic')+'-'+it.id+'.'+(it.video?'mp4':'jpg'), await (await fetch(it.url)).blob()); n++; }catch(e){} }
+      if(!n) return;
+      const a=document.createElement('a'); a.href=URL.createObjectURL(await zip.generateAsync({type:'blob'})); a.download='album-shagiv.zip'; a.click();
     };
-    load(); setInterval(load, 8000);
+    load(); setInterval(load,8000);
   </script>
 </body>
 </html>
