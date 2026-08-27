@@ -19,6 +19,9 @@
     input,select{width:100%;padding:9px 10px;border-radius:10px;border:1.5px solid #d7cbb3;font:16px Assistant,sans-serif;background:#fff}
     .grid2{display:grid;grid-template-columns:1fr 90px;gap:8px}
     .add{width:100%;margin-top:10px;border:0;border-radius:12px;padding:12px;font:800 15px Assistant,sans-serif;background:var(--gold);color:var(--navy)}
+    .filt{display:flex;gap:8px;margin:0 0 12px}
+    .filt button{flex:1;border:0;border-radius:12px;padding:11px 8px;font:800 14px Assistant,sans-serif;background:#fff;color:var(--navy);border:1px solid #d7cbb3}
+    .filt button.on{background:var(--navy);color:#f3e7b8;border-color:var(--navy)}
     .tbl{font-weight:800;color:var(--navy);margin:14px 0 6px;font-size:14px}
     .row{background:#fff;border-radius:12px;padding:10px;margin-bottom:8px;border:1px solid #eadfc8}
     .row .top{display:flex;align-items:center;gap:8px}
@@ -51,7 +54,12 @@
     </div>
     <button class="add" id="addBtn" type="button">הוספת אורח</button>
   </div>
-  <input id="q" placeholder="חיפוש שם, שולחן או תיאור" style="width:100%;padding:10px 12px;border-radius:12px;border:1.5px solid #d7cbb3;font:16px Assistant,sans-serif;margin:8px 0 12px" />
+  <input id="q" placeholder="חיפוש שם, שולחן או תיאור" style="width:100%;padding:10px 12px;border-radius:12px;border:1.5px solid #d7cbb3;font:16px Assistant,sans-serif;margin:8px 0" />
+  <div class="filt">
+    <button type="button" id="allBtn" class="on">הכל</button>
+    <button type="button" id="missBtn">בלי סכום</button>
+    <button type="button" id="hasBtn">עם סכום</button>
+  </div>
   <datalist id="cats">
     <option value="עבודה טלי"></option>
     <option value="עבודה יואב"></option>
@@ -69,8 +77,8 @@
 <script src="app.js"></script>
 <script>
 const STORE='https://extendsclass.com/api/json-storage/bin/baffbbf';
-const CATS=['עבודה טלי','עבודה יואב','חברים יואב','חברים טלי','חברים טלי ויואב','חברים שגיב','חברים לין','משפחה טלי','משפחה יואב'];
 const note=document.getElementById('note');
+let filterMode='all';
 let data={gifts:{}, extras:[]};
 try{
   const raw=JSON.parse(localStorage.getItem('shagiv-gifts')||'{}');
@@ -108,15 +116,26 @@ function totals(){
     if(a){ sum+=a; filled++; }
   }
   document.getElementById('total').textContent=sum.toLocaleString('he-IL')+' ₪';
-  document.getElementById('filled').textContent=filled+' מתוך '+people.length+' רשומות עם סכום';
+  document.getElementById('filled').textContent=filled+' עם סכום · '+(people.length-filled)+' בלי סכום';
+  document.getElementById('missBtn').textContent='בלי סכום ('+(people.length-filled)+')';
+  document.getElementById('hasBtn').textContent='עם סכום ('+filled+')';
+}
+function setFilter(mode){
+  filterMode=mode;
+  document.getElementById('allBtn').classList.toggle('on', mode==='all');
+  document.getElementById('missBtn').classList.toggle('on', mode==='miss');
+  document.getElementById('hasBtn').classList.toggle('on', mode==='has');
+  draw();
 }
 function draw(){
   const q=document.getElementById('q').value.trim();
   const rows=allGuests().sort((a,b)=>(Number(a.table)||99)-(Number(b.table)||99)||a.name.localeCompare(b.name,'he'));
   const filt=rows.filter(g=>{
+    const r=rec(keyOf(g));
+    if(filterMode==='miss' && r.amount) return false;
+    if(filterMode==='has' && !r.amount) return false;
     if(!q) return true;
-    const d=rec(keyOf(g)).desc||'';
-    return g.name.includes(q) || String(g.table)===q || d.includes(q);
+    return g.name.includes(q) || String(g.table)===q || (r.desc||'').includes(q);
   });
   let html='', last='__';
   for(const g of filt){
@@ -158,6 +177,9 @@ document.getElementById('addBtn').onclick=()=>{
   persist(); draw();
 };
 document.getElementById('q').oninput=draw;
+document.getElementById('allBtn').onclick=()=>setFilter('all');
+document.getElementById('missBtn').onclick=()=>setFilter('miss');
+document.getElementById('hasBtn').onclick=()=>setFilter('has');
 async function loadRemote(){
   try{
     const js=await (await fetch(STORE+'?t='+Date.now(),{cache:'no-store'})).json();
