@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>תמונות וסרטונים · שגיב</title>
+  <title>אלבום משותף · שגיב</title>
   <style>
     body { margin:0; font-family:Arial,sans-serif; background:#1a2744; color:#2a2418; }
     .card { max-width:440px; margin:16px auto; background:#f7f1e4; border-radius:24px; padding:16px; }
     h1 { text-align:center; color:#1a2744; font-size:22px; margin:4px 0 8px; }
     p { text-align:center; color:#5a5346; font-size:14px; }
-    video#live { width:100%; border-radius:16px; background:#000; min-height:220px; object-fit:cover; transform: scaleX(-1); }
+    video#live { width:100%; border-radius:16px; background:#000; min-height:220px; object-fit:cover; transform:scaleX(-1); }
     .row { display:flex; gap:8px; margin-top:10px; }
     button, .back { flex:1; border:0; border-radius:14px; padding:14px 8px; font-weight:800; font-size:15px; cursor:pointer; }
     .cam { background:#1a2744; color:#f3e7b8; }
@@ -25,8 +25,8 @@
 </head>
 <body>
   <div class="card">
-    <h1>תמונות וסרטונים</h1>
-    <p>מצלמת סלפי. הקבצים נשמרים כ-48 שעות כדי שתוכלו להוריד.</p>
+    <h1>אלבום משותף</h1>
+    <p>סלפי · קבצים נשמרים 48 שעות · כולם רואים את אותו אלבום</p>
     <video id="live" playsinline autoplay muted></video>
     <div class="row">
       <button class="cam" id="startCam" type="button">הפעלת מצלמה</button>
@@ -42,37 +42,44 @@
     <a class="back" href="./">חזרה לאתר האירוע</a>
   </div>
   <script>
-    const KEY='shagiv-media';
+    const ALBUM='https://extendsclass.com/api/json-storage/bin/bacfbbe';
+    const OWNER_KEY='shagiv-owner';
     const live=document.getElementById('live');
     const note=document.getElementById('note');
     const list=document.getElementById('list');
     const gal=document.getElementById('gal');
-    let stream=null, recorder=null, chunks=[];
+    let stream=null, recorder=null, chunks=[], items=[];
+    let owner=localStorage.getItem(OWNER_KEY);
+    if(!owner){ owner='u'+Math.random().toString(36).slice(2)+Date.now().toString(36); localStorage.setItem(OWNER_KEY, owner); }
     function say(t){ note.textContent=t; }
-    function load(){ try { return JSON.parse(localStorage.getItem(KEY)||'[]'); } catch(e){ return []; } }
-    function save(items){ localStorage.setItem(KEY, JSON.stringify(items)); }
-    function render(){
-      const items=load();
-      list.innerHTML = items.map(it=>{
-        const media = it.video ? '<video src="'+it.url+'" controls></video>' : '<img src="'+it.url+'" alt="">';
-        return '<div class="item">'+media+'<button class="del" data-id="'+it.id+'">מחיקה</button></div>';
-      }).join('');
-      list.querySelectorAll('.del').forEach(btn=>btn.onclick=()=>{
-        save(load().filter(x=>x.id!==btn.dataset.id));
+    async function loadAlbum(){
+      try{
+        const res=await fetch(ALBUM+'?t='+Date.now());
+        const data=await res.json();
+        items=Array.isArray(data.items)?data.items:[];
         render();
+      }catch(e){}
+    }
+    async function saveAlbum(){
+      await fetch(ALBUM,{ method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({items}) });
+    }
+    function render(){
+      list.innerHTML=items.map(it=>{
+        const media=it.video?'<video src="'+it.url+'" controls></video>':'<img src="'+it.url+'" alt="">';
+        const del=it.owner===owner?'<button class="del" data-id="'+it.id+'">מחיקה</button>':'';
+        return '<div class="item">'+media+del+'</div>';
+      }).join('');
+      list.querySelectorAll('.del').forEach(btn=>btn.onclick=async()=>{
+        items=items.filter(x=>!(x.id===btn.dataset.id && x.owner===owner));
+        render(); await saveAlbum();
       });
     }
     async function startCamera(){
       try{
         if(stream) stream.getTracks().forEach(t=>t.stop());
-        stream=await navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ exact:'user' }, width:{ ideal:1280 }, height:{ ideal:720 } }, audio:true });
+        stream=await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user' }, audio:true });
         live.srcObject=stream; await live.play(); say('מצלמת סלפי פעילה');
-      }catch(e){
-        try{
-          stream=await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user' }, audio:true });
-          live.srcObject=stream; await live.play(); say('מצלמת סלפי פעילה');
-        }catch(err){ say('אשרו הרשאת מצלמה.'); }
-      }
+      }catch(e){ say('אשרו הרשאת מצלמה'); }
     }
     document.getElementById('startCam').onclick=startCamera;
     document.getElementById('openGal').onclick=()=>gal.click();
@@ -80,41 +87,35 @@
       if(!live.videoWidth){ await startCamera(); return; }
       const c=document.createElement('canvas');
       c.width=live.videoWidth; c.height=live.videoHeight;
-      const ctx=c.getContext('2d');
-      ctx.translate(c.width,0); ctx.scale(-1,1);
-      ctx.drawImage(live,0,0);
+      const ctx=c.getContext('2d'); ctx.translate(c.width,0); ctx.scale(-1,1); ctx.drawImage(live,0,0);
       c.toBlob(blob=>upload(blob,'selfie-'+Date.now()+'.jpg', false),'image/jpeg',0.9);
     };
     document.getElementById('rec').onclick=async()=>{
       if(!stream){ await startCamera(); if(!stream) return; }
       if(recorder && recorder.state==='recording'){ recorder.stop(); return; }
-      chunks=[];
-      recorder=new MediaRecorder(stream);
+      chunks=[]; recorder=new MediaRecorder(stream);
       recorder.ondataavailable=e=>{ if(e.data.size) chunks.push(e.data); };
-      recorder.onstop=()=>{ upload(new Blob(chunks,{ type: recorder.mimeType || 'video/webm' }), 'video-'+Date.now()+'.webm', true); document.getElementById('rec').textContent='הקלט סרטון'; };
-      recorder.start();
-      document.getElementById('rec').textContent='עצור הקלטה';
-      say('מקליט...');
+      recorder.onstop=()=>{ upload(new Blob(chunks,{type:recorder.mimeType||'video/webm'}),'video-'+Date.now()+'.webm', true); document.getElementById('rec').textContent='הקלט סרטון'; };
+      recorder.start(); document.getElementById('rec').textContent='עצור הקלטה'; say('מקליט...');
     };
-    gal.onchange=()=>{ [...gal.files].forEach(f=>upload(f,f.name, (f.type||'').startsWith('video'))); };
+    gal.onchange=()=>{ [...gal.files].forEach(f=>upload(f,f.name,(f.type||'').startsWith('video'))); };
     async function upload(blob, name, video){
-      say('מעלה...');
-      const fd=new FormData();
-      fd.append('file', blob, name);
-      fd.append('expire', '172800');
+      say('מעלה לאלבום המשותף...');
+      const fd=new FormData(); fd.append('file', blob, name); fd.append('expire','172800');
       try{
-        const res=await fetch('https://tmpfiles.org/api/v1/upload',{ method:'POST', body:fd });
+        const res=await fetch('https://tmpfiles.org/api/v1/upload',{method:'POST', body:fd});
         const data=await res.json();
         if(data.status!=='success' || !data.data || !data.data.url){ say('ההעלאה נכשלה'); return; }
         const url=String(data.data.url).replace('tmpfiles.org/','tmpfiles.org/dl/');
-        const items=load();
-        items.unshift({ id: String(Date.now()), url, video:!!video });
-        save(items);
+        await loadAlbum();
+        items.unshift({ id: Date.now()+'-'+Math.random().toString(36).slice(2,7), url, video:!!video, owner });
+        await saveAlbum();
         render();
-        say('הקובץ עלה ויישאר כ-48 שעות');
+        say('עלה לאלבום. נשמר 48 שעות');
       }catch(e){ say('לא הצלחנו להעלות'); }
     }
-    render();
+    loadAlbum();
+    setInterval(loadAlbum, 12000);
     startCamera();
   </script>
 </body>
