@@ -13,10 +13,9 @@
     a.btn,button.btn{flex:1;text-align:center;text-decoration:none;border:0;border-radius:14px;padding:12px 8px;font-weight:800;font:800 14px Arial;min-width:46%}
     .navy{background:#1a2744;color:#f3e7b8}.gold{background:#c9a227;color:#1a2744}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-    .item{background:#fff;border-radius:12px;overflow:hidden;position:relative}
-    .item img{width:100%;height:160px;object-fit:cover;display:block;background:#ddd}
-    .play{position:absolute;top:58px;left:50%;transform:translateX(-50%);background:rgba(26,39,68,.85);color:#fff;border-radius:20px;padding:6px 12px;font-size:12px;font-weight:800;pointer-events:none}
-    .open{display:block;text-align:center;font-size:15px;font-weight:800;padding:12px;background:#1a2744;color:#f3e7b8;text-decoration:none}
+    .item{background:#fff;border-radius:12px;overflow:hidden}
+    .item img,.item video{width:100%;height:180px;object-fit:cover;display:block;background:#000}
+    .open{display:block;text-align:center;font-size:14px;font-weight:800;padding:10px;background:#1a2744;color:#f3e7b8;text-decoration:none}
     .del{width:100%;border:0;background:#eee;color:#7a2e2e;font-weight:800;padding:8px}
   </style>
 </head>
@@ -57,12 +56,11 @@ function draw(){
   const list=onlyMine?ALL.filter(isMine):ALL;
   if(!list.length){ grid.innerHTML='<div style="grid-column:1/-1;text-align:center;font-weight:700;padding:18px">עדיין אין תמונות</div>'; note.textContent=''; return; }
   grid.innerHTML=list.map(it=>{
-    const img=it.video?(it.poster||it.url):it.url;
-    const body=it.video
-      ? ('<a href="'+it.url+'" target="_blank" rel="noopener"><img src="'+img+'" alt=""><div class="play">▶ סרטון</div></a><a class="open" href="'+it.url+'" target="_blank" rel="noopener">נגן סרטון בטלפון</a>')
+    const media=it.video
+      ? ('<video src="'+it.url+'" poster="'+(it.poster||'')+'" controls playsinline webkit-playsinline></video><a class="open" href="'+it.url+'" target="_blank" rel="noopener">אם לא רץ — פתיחה בטלפון</a>')
       : ('<a href="'+it.url+'" target="_blank" rel="noopener"><img src="'+it.url+'" alt=""></a>');
     const del=isMine(it)?'<button class="del" data-id="'+it.id+'">מחיקת התמונה שלי</button>':'';
-    return '<div class="item">'+body+del+'</div>';
+    return '<div class="item">'+media+del+'</div>';
   }).join('');
   grid.querySelectorAll('.del').forEach(b=>b.onclick=()=>delOne(b.dataset.id));
   note.textContent=list.length+' פריטים';
