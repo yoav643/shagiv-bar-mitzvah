@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#1a2744" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <title>בר המצווה של שגיב פסטינגר — מספר שולחן</title>
   <meta name="description" content="לחצו כדי למצוא את מספר השולחן בבר המצווה של שגיב פסטינגר. אורימא, באר שבע · 27.08.2026 בשעה 19:30" />
   <meta property="og:type" content="website" />
@@ -74,6 +75,11 @@
     .pay .bit { background: #00c2e0; color: #0b1d24; }
     .pay .paybox { background: #0ea5e9; color: #fff; }
     .footer { text-align:center; font-size:12.5px; color:#7a7366; padding:0 20px 12px; }
+    .countdown { display:flex; justify-content:center; gap:8px; margin-top:12px; }
+    .cd-box { min-width:58px; background:var(--white); border:1px solid rgba(201,162,39,.35); border-radius:12px; padding:8px 6px 6px; }
+    .cd-box b { display:block; font-family:"Frank Ruhl Libre",serif; font-size:22px; color:var(--navy); line-height:1; }
+    .cd-box span { font-size:11px; font-weight:700; color:#6b6456; }
+    .cd-live { margin-top:12px; font-weight:800; color:var(--navy); }
   </style>
 </head>
 <body>
@@ -85,6 +91,7 @@
       <h1>שגיב פסטינגר</h1>
       <p class="meta">האירוע מתקיים היום · יום חמישי</p>
       <div class="when">📅 19:30 | 27/08/2026</div>
+      <div class="countdown" id="countdown" aria-live="polite"></div>
       <div class="venue"><strong>אורימא</strong><span>הפלדה 13, באר שבע</span></div>
       <div class="divider"></div>
     </div>
@@ -231,6 +238,23 @@
     }
     document.getElementById("go").addEventListener("click", search);
     document.getElementById("phone").addEventListener("keydown", e=>{ if(e.key==="Enter") search(); });
+    const EVENT_AT = new Date("2026-08-27T19:30:00+03:00").getTime();
+    function tick(){
+      const el=document.getElementById("countdown");
+      if(!el) return;
+      const diff=EVENT_AT-Date.now();
+      if(diff<=0){ el.innerHTML='<div class="cd-live">האירוע התחיל · נתראה באולם</div>'; return; }
+      const s=Math.floor(diff/1000);
+      const d=Math.floor(s/86400);
+      const h=Math.floor((s%86400)/3600);
+      const m=Math.floor((s%3600)/60);
+      const sec=s%60;
+      const pad=n=>String(n).padStart(2,"0");
+      const box=(val,label)=>`<div class="cd-box"><b>${val}</b><span>${label}</span></div>`;
+      el.innerHTML=(d>0?box(d,"ימים"):"")+box(pad(h),"שעות")+box(pad(m),"דקות")+box(pad(sec),"שניות");
+    }
+    tick();
+    setInterval(tick,1000);
   </script>
 </body>
 </html>
