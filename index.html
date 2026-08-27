@@ -24,8 +24,8 @@
     .venue { margin-top:10px; display:flex; align-items:center; justify-content:center; gap:10px; }
     .venue strong { display:block; font-family:"Frank Ruhl Libre",serif; font-size:20px; color:var(--navy); }
     .venue span { font-size:13px; color:#5a5346; }
-    .waze { width:44px; height:44px; border-radius:50%; overflow:hidden; flex-shrink:0; display:block; }
-    .waze svg { width:44px; height:44px; display:block; }
+    .waze { width:44px; height:44px; border-radius:50%; overflow:hidden; flex-shrink:0; display:block; background:#33CCFF; }
+    .waze img { width:44px; height:44px; display:block; object-fit:cover; }
     .gift-btn { margin:12px auto 0; width:64px; height:64px; border:0; border-radius:50%; font-size:30px; box-shadow:0 8px 18px rgba(201,162,39,.45); animation:bob 1.15s ease-in-out infinite; }
     .top .gift-btn { background:linear-gradient(180deg,#f3c14b,#c9a227); color:#1a2744; padding:0; min-width:64px; }
     @keyframes bob { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-9px) scale(1.06)} }
@@ -91,9 +91,7 @@
     </div>
     <div class="venue">
       <div><strong>אורימא</strong><span>הפלדה 13, באר שבע</span></div>
-      <a class="waze" href="https://www.waze.com/ul?q=%D7%90%D7%95%D7%A8%D7%99%D7%9E%D7%90%20%D7%94%D7%A4%D7%9C%D7%93%D7%94%2013%20%D7%91%D7%90%D7%A8%20%D7%A9%D7%91%D7%A2&navigate=yes" target="_blank" rel="noopener" aria-label="ניווט ב-Waze">
-        <svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="32" fill="#33CCFF"/><path d="M32 10c10.5 0 19 7.2 19 17.8 0 7.6-5.2 14.2-10.2 18.3-1.6 1.3-3.7.8-4.6-1.1l-3-5.2c-.6-1.1-1.9-1.6-3.1-1.1-2.6.9-5.5.7-7.8-.8-5.4-3.6-7.1-9.8-4.5-15.3C20.6 15.2 26 10 32 10z" fill="#1A2744"/><circle cx="26.2" cy="26.8" r="3.1" fill="#33CCFF"/><circle cx="36.6" cy="26.8" r="3.1" fill="#33CCFF"/><path d="M25.5 34.8c2.2 2.4 5.2 3.6 8.6 3.2 2.8-.3 5-1.6 6.6-3.4" stroke="#33CCFF" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>
-      </a>
+      <a class="waze" href="https://www.waze.com/ul?q=%D7%90%D7%95%D7%A8%D7%99%D7%9E%D7%90%20%D7%94%D7%A4%D7%9C%D7%93%D7%94%2013%20%D7%91%D7%90%D7%A8%20%D7%A9%D7%91%D7%A2&navigate=yes" target="_blank" rel="noopener" aria-label="ניווט ב-Waze"><img src="waze.svg" alt="Waze"></a>
     </div>
     <button class="gift-btn" id="giftBtn" type="button" aria-label="מתנה">🎁</button>
     <div class="pay-pop" id="giftPop">
