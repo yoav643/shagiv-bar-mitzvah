@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>כסף מהאורחים · ניהול</title>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;700;800&family=Frank+Ruhl+Libre:wght@700;900&display=swap" rel="stylesheet" />
+  <style>
+    :root{--navy:#1a2744;--gold:#c9a227;--cream:#f7f1e4}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{min-height:100vh;background:#1a2744;font-family:Assistant,Arial,sans-serif;display:flex;justify-content:center;padding:16px}
+    .wrap{width:100%;max-width:440px;background:var(--cream);border-radius:24px;padding:16px}
+    h1{text-align:center;font-family:"Frank Ruhl Libre",serif;color:var(--navy);margin-bottom:6px}
+    .sum{background:#fff;border:1px solid rgba(201,162,39,.35);border-radius:16px;padding:12px;text-align:center;margin:10px 0}
+    .sum b{display:block;font-family:"Frank Ruhl Libre",serif;font-size:28px;color:var(--navy)}
+    .sum span{color:#5a5346;font-size:13px}
+    input.search{width:100%;padding:10px 12px;border-radius:12px;border:1.5px solid #d7cbb3;font:16px Assistant,sans-serif;margin:8px 0 12px}
+    .tbl{font-weight:800;color:var(--navy);margin:14px 0 6px;font-size:14px}
+    .row{display:flex;align-items:center;gap:8px;background:#fff;border-radius:12px;padding:8px 10px;margin-bottom:6px;border:1px solid #eadfc8}
+    .row .name{flex:1;font-weight:800;color:var(--navy)}
+    .row .meta{display:block;font-size:12px;color:#7a7366;font-weight:600}
+    .row input{width:92px;padding:8px;border-radius:10px;border:1.5px solid #d7cbb3;font:700 16px Assistant,sans-serif;direction:ltr;text-align:left}
+    .nav{display:flex;gap:8px;margin-bottom:8px}
+    a.btn{flex:1;text-align:center;text-decoration:none;border-radius:12px;padding:12px 8px;font-weight:800;background:var(--navy);color:#f3e7b8}
+    #note{text-align:center;color:#5a5346;font-size:13px;margin-top:8px}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>כסף מהאורחים</h1>
+  <div class="nav">
+    <a class="btn" href="admin.html">חזרה לניהול</a>
+  </div>
+  <div class="sum"><b id="total">0 ₪</b><span id="filled">עדיין לא הוזן סכום</span></div>
+  <input class="search" id="q" type="search" placeholder="חיפוש שם או שולחן" />
+  <div id="list"></div>
+  <p id="note"></p>
+</div>
+<script src="app.js"></script>
+<script>
+const STORE='https://extendsclass.com/api/json-storage/bin/baffbbf';
+const note=document.getElementById('note');
+let gifts={};
+try{ gifts=JSON.parse(localStorage.getItem('shagiv-gifts')||'{}'); }catch(e){ gifts={}; }
+function keyOf(g){ return g.name+'|'+g.table; }
+function num(v){ const n=Number(String(v).replace(/[^0-9.]/g,'')); return isFinite(n)&&n>0?n:0; }
+function saveLocal(){ localStorage.setItem('shagiv-gifts', JSON.stringify(gifts)); }
+async function saveRemote(){
+  try{
+    await fetch(STORE,{method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({gifts})});
+  }catch(e){}
+}
+function totals(){
+  const vals=Object.values(gifts).map(num);
+  const sum=vals.reduce((a,b)=>a+b,0);
+  const filled=vals.filter(v=>v>0).length;
+  document.getElementById('total').textContent=sum.toLocaleString('he-IL')+' ₪';
+  document.getElementById('filled').textContent=filled+' מתוך '+(typeof GUESTS==='undefined'?0:GUESTS.length)+' רשומות עם סכום';
+}
+function draw(){
+  if(typeof GUESTS==='undefined'){ document.getElementById('list').innerHTML='<p>לא נטענה לטעון את רשימת האורחים</p>'; return; }
+  const q=document.getElementById('q').value.trim();
+  const rows=[...GUESTS].sort((a,b)=>Number(a.table)-Number(b.table)||a.name.localeCompare(b.name,'he'));
+  const filt=rows.filter(g=>!q || g.name.includes(q) || String(g.table)===q);
+  let html='', last='';
+  for(const g of filt){
+    if(g.table!==last){ html+='<div class="tbl">שולחן '+g.table+'</div>'; last=g.table; }
+    const k=keyOf(g);
+    const val=gifts[k]||'';
+    html+='<div class="row"><div class="name">'+g.name+'<span class="meta">'+(g.guests||1)+' אורחים</span></div><input data-key="'+k+'" inputmode="numeric" placeholder="₪" value="'+(val||'')+'" /></div>';
+  }
+  document.getElementById('list').innerHTML=html||'<p style="text-align:center;color:#5a5346">לא נמצאו אורחים</p>';
+  document.querySelectorAll('input[data-key]').forEach(inp=>{
+    inp.onchange=inp.onblur=()=>{
+      const n=num(inp.value);
+      if(n) gifts[inp.dataset.key]=n; else delete gifts[inp.dataset.key];
+      inp.value=n||'';
+      saveLocal(); saveRemote(); totals();
+      note.textContent='נשמר';
+    };
+  });
+  totals();
+}
+async function loadRemote(){
+  try{
+    const js=await (await fetch(STORE+'?t='+Date.now(),{cache:'no-store'})).json();
+    const remote=(js&&js.gifts)||js||{};
+    if(remote && typeof remote==='object' && !Array.isArray(remote)){
+      gifts=Object.assign({}, remote, gifts);
+      saveLocal();
+    }
+  }catch(e){}
+  draw();
+}
+document.getElementById('q').oninput=draw;
+loadRemote();
+</script>
+</body></html>
