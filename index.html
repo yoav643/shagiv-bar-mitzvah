@@ -13,14 +13,6 @@
   <meta property="og:title" content="בר המצווה של שגיב פסטינגר" />
   <meta property="og:description" content="לחצו כדי למצוא את מספר השולחן · אורימא, באר שבע · 27.08.2026 בשעה 19:30" />
   <meta property="og:image" content="https://wsrv.nl/?url=raw.githubusercontent.com/yoav643/shagiv-bar-mitzvah/main/og-image.svg&output=png&w=1200&h=630" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="בר המצווה של שגיב פסטינגר" />
-  <meta name="twitter:description" content="לחצו כדי למצוא את מספר השולחן" />
-  <meta name="twitter:image" content="https://wsrv.nl/?url=raw.githubusercontent.com/yoav643/shagiv-bar-mitzvah/main/og-image.svg&output=png&w=1200&h=630" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Frank+Ruhl+Libre:wght@500;700;900&display=swap" rel="stylesheet" />
   <style>
     :root { --navy:#1a2744; --gold:#c9a227; --gold-light:#e8d48b; --cream:#f7f1e4; --ink:#2a2418; --white:#fffdf8; }
@@ -28,7 +20,7 @@
     html,body { min-height:100%; background:radial-gradient(ellipse at top,#2c3d62 0%,var(--navy) 55%,#10182a 100%); color:var(--ink); font-family:"Assistant","Segoe UI",Tahoma,sans-serif; }
     body { display:flex; justify-content:center; padding:18px 12px 40px; }
     .phone { width:100%; max-width:440px; background:var(--cream); border-radius:28px; overflow:hidden; box-shadow:0 0 0 8px var(--navy),0 24px 60px rgba(0,0,0,.45); }
-    .top { text-align:center; padding:24px 22px 14px; background:linear-gradient(180deg,rgba(26,39,68,.08) 0%,transparent 40%),var(--cream); }
+    .top { text-align:center; padding:24px 22px 14px; }
     .garland { font-size:22px; letter-spacing:3px; }
     .badge { width:72px; height:72px; margin:8px auto 10px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#3a5280,#1a2744 70%); color:#f3e7b8; display:flex; align-items:center; justify-content:center; font-family:"Frank Ruhl Libre",serif; font-weight:900; font-size:34px; border:3px solid var(--gold-light); }
     .kicker { font-size:14px; color:#4a4336; line-height:1.5; }
@@ -45,11 +37,9 @@
     label { display:block; font-size:13px; font-weight:700; color:var(--navy); margin-bottom:6px; }
     .input-row { display:flex; gap:8px; }
     input[type="tel"] { flex:1; font-family:inherit; font-size:18px; padding:12px; border-radius:14px; border:1.5px solid #d7cbb3; background:var(--white); color:var(--navy); outline:none; direction:ltr; text-align:left; }
-    input[type="tel"]:focus { border-color:var(--gold); box-shadow:0 0 0 4px rgba(201,162,39,.18); }
     button { font-family:inherit; font-weight:800; font-size:16px; border:0; border-radius:14px; padding:0 16px; background:linear-gradient(180deg,#2b3d63,var(--navy)); color:var(--gold-light); cursor:pointer; min-width:84px; }
     .result { margin-top:16px; }
-    .box { background:var(--white); border-radius:18px; padding:16px 14px 12px; text-align:center; border:1px solid rgba(201,162,39,.3); animation:pop .28s ease; }
-    @keyframes pop { from { transform:translateY(8px); opacity:0; } to { transform:none; opacity:1; } }
+    .box { background:var(--white); border-radius:18px; padding:16px 14px 12px; text-align:center; border:1px solid rgba(201,162,39,.3); }
     .box .name { font-weight:800; font-size:19px; color:var(--navy); }
     .box .party { font-size:13.5px; color:#6b6456; margin-top:3px; }
     .table-num { margin-top:8px; font-family:"Frank Ruhl Libre",serif; font-weight:900; font-size:48px; line-height:1; color:var(--navy); }
@@ -70,8 +60,8 @@
     .gift h3 { font-size: 16px; color: var(--navy); margin-bottom: 4px; }
     .gift p { font-size: 13px; color: #6b6456; margin-bottom: 12px; }
     .pay { display: flex; gap: 8px; }
-    .pay a { flex: 1; text-decoration: none; border-radius: 12px; padding: 10px 8px; font-weight: 800; font-size: 13.5px; display: flex; align-items: center; justify-content: center; gap: 7px; }
-    .pay a svg { width: 22px; height: 22px; flex-shrink: 0; }
+    .pay a { flex: 1; text-decoration: none; border-radius: 12px; padding: 10px 8px; font-weight: 800; font-size: 13.5px; display: flex; align-items: center; justify-content: center; gap: 7px; color:#fff; }
+    .pay a svg { width: 22px; height: 22px; }
     .pay .bit { background: #00c2e0; color: #0b1d24; }
     .pay .paybox { background: #0ea5e9; color: #fff; }
     .footer { text-align:center; font-size:12.5px; color:#7a7366; padding:0 20px 12px; }
@@ -79,7 +69,11 @@
     .cd-box { min-width:58px; background:var(--white); border:1px solid rgba(201,162,39,.35); border-radius:12px; padding:8px 6px 6px; }
     .cd-box b { display:block; font-family:"Frank Ruhl Libre",serif; font-size:22px; color:var(--navy); line-height:1; }
     .cd-box span { font-size:11px; font-weight:700; color:#6b6456; }
-    .cd-live { margin-top:12px; font-weight:800; color:var(--navy); }
+    .mates { margin-top:12px; text-align:right; background:#f7f1e4; border-radius:12px; padding:10px 12px; }
+    .mates h4 { font-size:13px; color:var(--navy); margin-bottom:6px; text-align:center; }
+    .mates ul { list-style:none; font-size:14px; font-weight:700; color:#3a3428; }
+    .mates li { padding:4px 0; border-bottom:1px solid rgba(201,162,39,.18); }
+    .mates li:last-child { border-bottom:0; }
   </style>
 </head>
 <body>
@@ -91,7 +85,7 @@
       <h1>שגיב פסטינגר</h1>
       <p class="meta">האירוע מתקיים היום · יום חמישי</p>
       <div class="when">📅 19:30 | 27/08/2026</div>
-      <div class="countdown" id="countdown" aria-live="polite"></div>
+      <div class="countdown" id="countdown"></div>
       <div class="venue"><strong>אורימא</strong><span>הפלדה 13, באר שבע</span></div>
       <div class="divider"></div>
     </div>
@@ -103,20 +97,18 @@
         <input id="phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="0501234567" maxlength="15" />
         <button type="button" id="go">חיפוש</button>
       </div>
-      <div class="result" id="result" aria-live="polite"></div>
+      <div class="result" id="result"></div>
     </div>
     <div class="gift">
       <h3>רוצים לתת מתנה?</h3>
       <p>אפשר בביט או בפייבוקס</p>
       <div class="pay">
         <a class="bit" href="https://www.bitpay.co.il/app/me/0144C12D-C3D3-DF10-F603-8D9B06A7416B362F" target="_blank" rel="noopener">
-          <svg viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="12" fill="#08343b"/><text x="24" y="31" text-anchor="middle" font-family="Assistant,Arial,sans-serif" font-size="18" font-weight="800" fill="#00c2e0">bit</text></svg>
-          ביט
-        </a>
+          <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#08343b"/><text x="24" y="31" text-anchor="middle" font-size="18" font-weight="800" fill="#00c2e0">bit</text></svg>
+          ביט</a>
         <a class="paybox" href="https://links.payboxapp.com/PNf18qWlW5b" target="_blank" rel="noopener">
-          <svg viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="12" fill="#fff"/><text x="24" y="32" text-anchor="middle" font-family="Assistant,Arial,sans-serif" font-size="22" font-weight="800" fill="#0ea5e9">P</text></svg>
-          פייבוקס
-        </a>
+          <svg viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#fff"/><text x="24" y="32" text-anchor="middle" font-size="22" font-weight="800" fill="#0ea5e9">P</text></svg>
+          פייבוקס</a>
       </div>
     </div>
     <p class="footer">נתראה בשמחה · משפחת פסטינגר</p>
@@ -193,23 +185,12 @@
       {name:"שמש תמי",table:"10",phones:["0522766444"],guests:1},
       {name:"שרבף דנה",table:"10",phones:["0524713199"],guests:1}
     ];
-    const TABLES = {
-      "1":{x:28,y:168,w:28,h:48},"2":{x:28,y:118,w:28,h:48},
-      "3":{x:148,y:168,w:28,h:48},"4":{x:148,y:118,w:28,h:48},
-      "5":{x:22,y:78,w:36,h:28},"6":{x:132,y:72,w:36,h:28},
-      "7":{x:38,y:18,w:36,h:32},"8":{x:92,y:18,w:36,h:32},
-      "9":{x:228,y:16,w:36,h:32},"10":{x:228,y:56,w:36,h:32},
-      "11":{x:228,y:96,w:36,h:32},"12":{x:228,y:136,w:36,h:32},
-      "13":{x:228,y:176,w:36,h:32},"14":{x:228,y:216,w:36,h:32}
-    };
+    const TABLES = {"1":{x:28,y:168,w:28,h:48},"2":{x:28,y:118,w:28,h:48},"3":{x:148,y:168,w:28,h:48},"4":{x:148,y:118,w:28,h:48},"5":{x:22,y:78,w:36,h:28},"6":{x:132,y:72,w:36,h:28},"7":{x:38,y:18,w:36,h:32},"8":{x:92,y:18,w:36,h:32},"9":{x:228,y:16,w:36,h:32},"10":{x:228,y:56,w:36,h:32},"11":{x:228,y:96,w:36,h:32},"12":{x:228,y:136,w:36,h:32},"13":{x:228,y:176,w:36,h:32},"14":{x:228,y:216,w:36,h:32}};
     function normalize(raw){ if(!raw) return ""; let d=String(raw).replace(/\D/g,""); if(d.startsWith("972")) d="0"+d.slice(3); if(d.length===9 && !d.startsWith("0")) d="0"+d; return d; }
     function guestsLabel(n){ n=Number(n)||1; if(n===1) return "אורח אחד"; if(n===2) return "2 אורחים"; return n+" אורחים"; }
     function floorMap(highlight){
       const hi=String(highlight||"");
-      const rects=Object.keys(TABLES).map(num=>{
-        const t=TABLES[num]; const on=num===hi;
-        return `<rect class="${on?"tbl-hi":"tbl"}" x="${t.x}" y="${t.y}" width="${t.w}" height="${t.h}" rx="4"/><text class="tbl-txt" x="${t.x+t.w/2}" y="${t.y+t.h/2}">${num}</text>`;
-      }).join("");
+      const rects=Object.keys(TABLES).map(num=>{ const t=TABLES[num]; const on=num===hi; return `<rect class="${on?"tbl-hi":"tbl"}" x="${t.x}" y="${t.y}" width="${t.w}" height="${t.h}" rx="4"/><text class="tbl-txt" x="${t.x+t.w/2}" y="${t.y+t.h/2}">${num}</text>`; }).join("");
       return `<div class="map-wrap"><div class="map-title">מפת האולם · השולחן שלכם מסומן בזהב</div>
         <svg class="floor" viewBox="0 0 280 270" xmlns="http://www.w3.org/2000/svg">
           <rect x="1" y="1" width="278" height="268" rx="10" fill="#fbf6ea" stroke="#d7cbb3"/>
@@ -222,39 +203,33 @@
           ${rects}
           <path class="arrow" d="M42 248 L42 222"/><polygon fill="#1a2744" points="42,216 38,224 46,224"/>
           <text class="zone-txt" x="42" y="260">כניסה</text>
-        </svg>
-      </div>`;
+        </svg></div>`;
     }
     function search(){
       const q=normalize(document.getElementById("phone").value);
       const out=document.getElementById("result");
       if(q.length<9){ out.innerHTML='<div class="box error">נא להזין מספר טלפון מלא</div>'; return; }
-      const hits=GUESTS.filter(g => (g.phones||[]).some(ph => {
-        const p=normalize(ph);
-        return p===q || (p && q && p.slice(-9)===q.slice(-9));
-      }));
+      const hits=GUESTS.filter(g => (g.phones||[]).some(ph => { const p=normalize(ph); return p===q || (p && q && p.slice(-9)===q.slice(-9)); }));
       if(!hits.length){ out.innerHTML='<div class="box error">לא מצאנו את המספר ברשימה.<br>נסו מספר אחר או פנו לצוות הקבלה.</div>'; return; }
-      out.innerHTML=hits.map(g=>`<div class="box"><div class="name">${g.name}</div><div class="party">${guestsLabel(g.guests)}</div><div class="table-num">${g.table}</div><div class="table-label">מספר שולחן</div>${floorMap(g.table)}</div>`).join("");
+      out.innerHTML=hits.map(g=>{
+        const mates=GUESTS.filter(x=>String(x.table)===String(g.table));
+        const list=mates.map(x=>`<li>${x.name}${x.name===g.name?' · אתם':''}</li>`).join("");
+        return `<div class="box"><div class="name">${g.name}</div><div class="party">${guestsLabel(g.guests)}</div><div class="table-num">${g.table}</div><div class="table-label">מספר שולחן</div><div class="mates"><h4>מי איתכם בשולחן?</h4><ul>${list}</ul></div>${floorMap(g.table)}</div>`;
+      }).join("");
     }
     document.getElementById("go").addEventListener("click", search);
     document.getElementById("phone").addEventListener("keydown", e=>{ if(e.key==="Enter") search(); });
     const EVENT_AT = new Date("2026-08-27T19:30:00+03:00").getTime();
     function tick(){
-      const el=document.getElementById("countdown");
-      if(!el) return;
+      const el=document.getElementById("countdown"); if(!el) return;
       const diff=EVENT_AT-Date.now();
-      if(diff<=0){ el.innerHTML='<div class="cd-live">האירוע התחיל · נתראה באולם</div>'; return; }
-      const s=Math.floor(diff/1000);
-      const d=Math.floor(s/86400);
-      const h=Math.floor((s%86400)/3600);
-      const m=Math.floor((s%3600)/60);
-      const sec=s%60;
+      if(diff<=0){ el.innerHTML='<div style="font-weight:800;color:#1a2744">האירוע התחיל · נתראה באולם</div>'; return; }
+      const s=Math.floor(diff/1000); const d=Math.floor(s/86400); const h=Math.floor((s%86400)/3600); const m=Math.floor((s%3600)/60); const sec=s%60;
       const pad=n=>String(n).padStart(2,"0");
       const box=(val,label)=>`<div class="cd-box"><b>${val}</b><span>${label}</span></div>`;
       el.innerHTML=(d>0?box(d,"ימים"):"")+box(pad(h),"שעות")+box(pad(m),"דקות")+box(pad(sec),"שניות");
     }
-    tick();
-    setInterval(tick,1000);
+    tick(); setInterval(tick,1000);
   </script>
 </body>
 </html>
