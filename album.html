@@ -36,7 +36,6 @@
 </div>
 <script>
 const ALBUM_ID='LZUxwoK', HASH='zlu4GEWHMh6vEso', AUTH='Client-ID 546c25a59c58ad7';
-const STORE='https://extendsclass.com/api/json-storage/bin/bacfbbe';
 let owner=localStorage.getItem('shagiv-owner')||'', onlyMine=false, ALL=[];
 function mineIds(){ try{return JSON.parse(localStorage.getItem('shagiv-mine-ids')||'[]');}catch(e){return[];} }
 function parseDesc(d){ d=String(d||''); if(d.startsWith('VID|')){ const p=d.split('|'); return {video:true,owner:p[1]||'',url:p.slice(2).join('|')}; } return {video:false,owner:d,url:''}; }
@@ -57,7 +56,9 @@ function draw(){
   const list=onlyMine?ALL.filter(isMine):ALL;
   if(!list.length){ grid.innerHTML='<div style="grid-column:1/-1;text-align:center;font-weight:700;padding:18px">עדיין אין תמונות</div>'; note.textContent=''; return; }
   grid.innerHTML=list.map(it=>{
-    const media=it.video?('<video src="'+it.url+'" controls playsinline></video><a class="open" href="'+it.url+'" target="_blank" rel="noopener">פתיחת סרטון</a>'):('<a href="'+it.url+'" target="_blank" rel="noopener"><img src="'+it.url+'"></a>');
+    const media=it.video
+      ? ('<video src="'+it.url+'" poster="'+(it.poster||'')+'" controls playsinline></video><a class="open" href="'+it.url+'" target="_blank" rel="noopener">פתיחת / הורדת סרטון</a>')
+      : ('<a href="'+it.url+'" target="_blank" rel="noopener"><img src="'+it.url+'"></a>');
     const del=isMine(it)?'<button class="del" data-id="'+it.id+'">מחיקת התמונה שלי</button>':'';
     return '<div class="item">'+media+del+'</div>';
   }).join('');
@@ -73,7 +74,7 @@ async function load(){
       const video=!!(meta.video||String(x.type||'').startsWith('video')||x.mp4);
       let url=video?(meta.url||x.mp4||x.link):x.link;
       if(video) url=await rawVideo(url);
-      map.set(x.id,{id:x.id,url,video,owner:meta.owner});
+      map.set(x.id,{id:x.id,url,poster:x.link,video,owner:meta.owner});
     }
   }catch(e){}
   ALL=[...map.values()];
