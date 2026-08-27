@@ -60,7 +60,7 @@
 const AUTH='Client-ID 546c25a59c58ad7', HASH='zlu4GEWHMh6vEso';
 const live=document.getElementById('live'), note=document.getElementById('note'), list=document.getElementById('list');
 const gal=document.getElementById('gal'), flip=document.getElementById('flip'), shutter=document.getElementById('shutter');
-let stream=null, recorder=null, chunks=[], facing='user', mode='photo';
+let stream=null, recorder=null, chunks=[], facing='user', mode='photo', recTimer=null, recLeft=60;
 let owner=localStorage.getItem('shagiv-owner');
 if(!owner){ owner='u'+Math.random().toString(36).slice(2,10); localStorage.setItem('shagiv-owner', owner); }
 function mineIds(){ try{return JSON.parse(localStorage.getItem('shagiv-mine-ids')||'[]');}catch(e){return[];} }
@@ -140,19 +140,32 @@ async function snap(){
   if(!live.videoWidth){ await startCamera(); if(!live.videoWidth) return; }
   upload(await frameBlob(),'photo.jpg',false);
 }
+function stopRec(){
+  if(recTimer){ clearInterval(recTimer); recTimer=null; }
+  if(recorder && recorder.state==='recording') recorder.stop();
+  shutter.classList.remove('rec');
+}
 async function recToggle(){
   if(!stream){ await startCamera(); if(!stream) return; }
-  if(recorder && recorder.state==='recording'){ recorder.stop(); shutter.classList.remove('rec'); return; }
+  if(recorder && recorder.state==='recording'){ stopRec(); return; }
   chunks=[];
   const mime=['video/mp4','video/webm'].find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t))||'';
   recorder=mime?new MediaRecorder(stream,{mimeType:mime}):new MediaRecorder(stream);
   recorder.ondataavailable=e=>{ if(e.data&&e.data.size) chunks.push(e.data); };
   recorder.onstop=async()=>{
+    if(recTimer){ clearInterval(recTimer); recTimer=null; }
     shutter.classList.remove('rec');
     const type=recorder.mimeType||'video/webm';
     upload(new Blob(chunks,{type}), type.includes('mp4')?'clip.mp4':'clip.webm', true, await frameBlob());
   };
-  recorder.start(); shutter.classList.add('rec'); say('מקליט...');
+  recorder.start(); shutter.classList.add('rec');
+  recLeft=60; say('מקליט 1:00');
+  recTimer=setInterval(()=>{
+    recLeft-=1;
+    const m=Math.floor(recLeft/60), s=('0'+(recLeft%60)).slice(-2);
+    say('מקליט '+m+':'+s);
+    if(recLeft<=0) stopRec();
+  },1000);
 }
 shutter.onclick=()=>{ mode==='video'?recToggle():snap(); };
 gal.onchange=()=>{ [...gal.files].forEach(f=>upload(f,f.name,(f.type||'').startsWith('video'))); };
