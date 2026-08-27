@@ -3,40 +3,67 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>שיתוף תמונות וסרטונים</title>
+  <title>תמונות וסרטונים · בר המצווה של שגיב</title>
   <style>
-    body { font-family: Arial, sans-serif; background:#1a2744; color:#2a2418; margin:0; padding:20px; }
-    .card { max-width:420px; margin:0 auto; background:#f7f1e4; border-radius:22px; padding:22px; text-align:center; }
-    h1 { color:#1a2744; font-size:22px; }
+    body { margin:0; font-family:Arial,sans-serif; background:#1a2744; color:#2a2418; }
+    .card { max-width:420px; margin:20px auto; background:#f7f1e4; border-radius:24px; padding:22px 18px; text-align:center; }
+    h1 { color:#1a2744; font-size:22px; margin:0 0 8px; }
     p { color:#5a5346; line-height:1.5; }
-    input { width:100%; margin:12px 0; }
-    button, a.btn { display:block; width:100%; background:#1a2744; color:#f3e7b8; border:0; border-radius:12px; padding:12px; font-weight:800; text-decoration:none; margin-top:8px; }
+    .hidden { position:absolute; width:1px; height:1px; opacity:0; }
+    .btns { display:flex; flex-direction:column; gap:10px; margin:16px 0; }
+    .btns button, .back { border:0; border-radius:14px; padding:16px; font-size:17px; font-weight:800; cursor:pointer; }
+    .cam { background:#1a2744; color:#f3e7b8; }
+    .gal { background:#c9a227; color:#1a2744; }
+    .share { background:#0ea5e9; color:#fff; display:none; }
+    .back { display:block; text-decoration:none; background:#fff; color:#1a2744; border:1px solid #d7cbb3; margin-top:10px; }
+    #preview { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+    #preview img, #preview video { width:100%; border-radius:12px; max-height:160px; object-fit:cover; background:#000; }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>תמונות וסרטונים מהערב</h1>
-    <p>בחרו תמונה או סרטון מהמצלמה או מהגלריה, ואז לחצו שיתוף כדי לשלוח למשפחה בוואטסאפ.</p>
-    <input id="media" type="file" accept="image/*,video/*" multiple />
-    <button type="button" id="share">שיתוף</button>
+    <h1>תמונות וסרטונים</h1>
+    <p>צלמו עכשיו או בחרו מהגלריה, ואז שלחו למשפחה בוואטסאפ.</p>
+    <input id="cam" class="hidden" type="file" accept="image/*,video/*" capture="environment" />
+    <input id="gal" class="hidden" type="file" accept="image/*,video/*" multiple />
+    <div class="btns">
+      <button class="cam" type="button" id="openCam">פתיחת מצלמה</button>
+      <button class="gal" type="button" id="openGal">בחירה מהגלריה</button>
+      <button class="share" type="button" id="share">שליחה בוואטסאפ</button>
+    </div>
+    <div id="preview"></div>
     <p id="note"></p>
-    <a class="btn" href="./">חזרה לאתר האירוע</a>
-    <a class="btn" href="brachot.html">לברכות המשפחה</a>
+    <a class="back" href="./">חזרה לאתר האירוע</a>
   </div>
   <script>
-    const media=document.getElementById('media');
+    const cam=document.getElementById('cam');
+    const gal=document.getElementById('gal');
+    const preview=document.getElementById('preview');
     const note=document.getElementById('note');
-    document.getElementById('share').onclick=async()=>{
-      const files=[...media.files];
-      if(!files.length){ note.textContent='בחרו קודם קובץ'; return; }
+    const shareBtn=document.getElementById('share');
+    let files=[];
+    document.getElementById('openCam').onclick=()=>cam.click();
+    document.getElementById('openGal').onclick=()=>gal.click();
+    function show(list){
+      files=[...list];
+      preview.innerHTML='';
+      files.forEach(f=>{
+        const url=URL.createObjectURL(f);
+        preview.innerHTML += (f.type||'').startsWith('video') ? '<video src="'+url+'" controls></video>' : '<img src="'+url+'" alt="">';
+      });
+      shareBtn.style.display=files.length?'block':'none';
+      note.textContent=files.length?'מוכן לשליחה':'';
+    }
+    cam.onchange=()=>show(cam.files);
+    gal.onchange=()=>show(gal.files);
+    shareBtn.onclick=async()=>{
+      if(!files.length) return;
       try{
         if(navigator.canShare && navigator.canShare({files})){
-          await navigator.share({title:'בר המצווה של שגיב', text:'תמונה/סרטון מבר המצווה של שגיב 🎉', files});
+          await navigator.share({title:'בר המצווה של שגיב', text:'מהערב של שגיב', files});
           note.textContent='נשלח';
-        } else {
-          note.textContent='שלחו את הקובץ ידנית מהגלריה בוואטסאפ.';
-        }
-      }catch(e){ if(e.name!=='AbortError') note.textContent='אפשר לשלוח ידנית מהגלריה.'; }
+        } else note.textContent='שלחו ידנית בוואטסאפ מהגלריה';
+      }catch(e){ if(e.name!=='AbortError') note.textContent='אפשר לשלוח ידנית מהגלריה'; }
     };
   </script>
 </body>
