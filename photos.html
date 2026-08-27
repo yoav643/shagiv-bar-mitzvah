@@ -3,126 +3,134 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>צילום לאלבום · שגיב</title>
+  <title>צילום לאלבום</title>
   <style>
-    body { margin:0; font-family:Arial,sans-serif; background:#1a2744; }
-    .card { max-width:440px; margin:16px auto; background:#f7f1e4; border-radius:24px; padding:16px; }
-    h1,p { text-align:center; } h1 { color:#1a2744; } p { color:#5a5346; }
-    video#live { width:100%; border-radius:16px; background:#000; min-height:220px; object-fit:cover; transform:scaleX(-1); }
-    .row { display:flex; gap:8px; margin-top:10px; }
-    button,.back { flex:1; border:0; border-radius:14px; padding:14px 8px; font-weight:800; }
-    .cam { background:#1a2744; color:#f3e7b8; }
-    .gal { background:#c9a227; color:#1a2744; }
-    .rec { background:#7a2e2e; color:#fff; }
-    .back { display:block; text-align:center; text-decoration:none; background:#fff; color:#1a2744; margin-top:12px; }
-    .hidden { position:absolute; opacity:0; width:1px; height:1px; }
+    body{margin:0;font-family:Arial,sans-serif;background:#1a2744}
+    .card{max-width:440px;margin:16px auto;background:#f7f1e4;border-radius:24px;padding:16px}
+    h1,p{text-align:center}h1{color:#1a2744}p{color:#5a5346}
+    video#live{width:100%;border-radius:16px;background:#000;min-height:200px;object-fit:cover;transform:scaleX(-1)}
+    .row{display:flex;gap:8px;margin-top:10px}
+    button,.back{flex:1;border:0;border-radius:14px;padding:14px 8px;font-weight:800}
+    .cam{background:#1a2744;color:#f3e7b8}.gal{background:#c9a227;color:#1a2744}.rec{background:#7a2e2e;color:#fff}
+    .del{background:#eee;color:#7a2e2e;width:100%;margin-top:8px}
+    .back{display:block;text-align:center;text-decoration:none;background:#fff;color:#1a2744;margin-top:12px}
+    .hidden{position:absolute;opacity:0;width:1px;height:1px}
+    .item{background:#fff;border-radius:12px;padding:8px;margin-top:8px;text-align:center}
+    .item img,.item video{width:100%;max-height:220px;object-fit:cover;border-radius:8px}
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>צילום לאלבום</h1>
-    <p>סרטון ותמונה נכנסים לאלבום של כולם</p>
-    <video id="live" playsinline autoplay muted></video>
-    <div class="row">
-      <button class="cam" id="startCam" type="button">הפעלת מצלמה</button>
-      <button class="cam" id="snap" type="button">צלם והעלה</button>
-    </div>
-    <div class="row">
-      <button class="rec" id="rec" type="button">הקלט סרטון</button>
-      <button class="gal" id="openGal" type="button">מהגלריה</button>
-    </div>
-    <input id="gal" class="hidden" type="file" accept="image/*,video/*" multiple />
-    <p id="note"></p>
-    <a class="back" href="album.html">לאלבום המשותף</a>
-    <a class="back" href="./">חזרה</a>
+<div class="card">
+  <h1>צילום לאלבום</h1>
+  <p>אחרי העלאה יופיע כאן כפתור מחיקה</p>
+  <video id="live" playsinline autoplay muted></video>
+  <div class="row">
+    <button class="cam" id="startCam" type="button">הפעלת מצלמה</button>
+    <button class="cam" id="snap" type="button">צלם והעלה</button>
   </div>
-  <script>
-    const live=document.getElementById('live'), note=document.getElementById('note'), gal=document.getElementById('gal');
-    const STORE='https://extendsclass.com/api/json-storage/bin/bacfbbe';
-    let stream=null, recorder=null, chunks=[];
-    let owner=localStorage.getItem('shagiv-owner');
-    if(!owner){ owner='u'+Math.random().toString(36).slice(2,10); localStorage.setItem('shagiv-owner', owner); }
-    function say(t){ note.textContent=t; }
-    async function readStore(){ try{ return await (await fetch(STORE+'?t='+Date.now(),{cache:'no-store'})).json() || {}; }catch(e){ return {}; } }
-    async function writeStore(data){ await fetch(STORE,{method:'PUT', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(data)}); }
-    async function remember(id, extra){
-      try{
-        const data=await readStore();
-        data.owners=data.owners||{}; data.owners[id]=owner;
-        if(extra){ data.extras=data.extras||[]; data.extras.unshift(extra); }
-        await writeStore(data);
-      }catch(e){}
+  <div class="row">
+    <button class="rec" id="rec" type="button">הקלט סרטון</button>
+    <button class="gal" id="openGal" type="button">מהגלריה</button>
+  </div>
+  <input id="gal" class="hidden" type="file" accept="image/*,video/*" multiple>
+  <p id="note"></p>
+  <div id="list"></div>
+  <a class="back" id="toAlbum" href="album.html">לאלבום המשותף</a>
+  <a class="back" href="./">חזרה</a>
+</div>
+<script>
+const AUTH='Client-ID 546c25a59c58ad7', HASH='zlu4GEWHMh6vEso';
+const live=document.getElementById('live'), note=document.getElementById('note'), list=document.getElementById('list'), gal=document.getElementById('gal');
+let stream=null, recorder=null, chunks=[], mine=[];
+let owner=localStorage.getItem('shagiv-owner');
+if(!owner){ owner='u'+Math.random().toString(36).slice(2,10); localStorage.setItem('shagiv-owner', owner); }
+document.getElementById('toAlbum').href='album.html?me='+encodeURIComponent(owner);
+function say(t){ note.textContent=t; }
+function render(){
+  list.innerHTML=mine.map(it=>'<div class="item">'+(it.video?'<video src="'+it.url+'" controls playsinline></video>':'<img src="'+it.url+'">')+'<button class="del" data-id="'+it.id+'">מחיקת התמונה שלי</button></div>').join('');
+  list.querySelectorAll('.del').forEach(b=>b.onclick=()=>delMine(b.dataset.id));
+}
+async function delMine(id){
+  try{
+    await fetch('https://api.imgur.com/3/album/'+HASH+'/remove_images',{method:'POST', headers:{Authorization:AUTH}, body:new URLSearchParams({ids:id})});
+  }catch(e){}
+  mine=mine.filter(x=>x.id!==id); render(); say('נמחק מהאלבום');
+}
+async function imgurFile(file, video, desc){
+  const fd=new FormData();
+  fd.append(video?'video':'image', file);
+  fd.append('album', HASH);
+  fd.append('description', desc);
+  fd.append('title', desc);
+  const r=await fetch('https://api.imgur.com/3/upload',{method:'POST', headers:{Authorization:AUTH}, body:fd});
+  const j=await r.json();
+  if(!j||!j.success||!j.data||!j.data.id) throw new Error((j&&j.data&&j.data.error)||'העלאה נכשלה');
+  return j.data;
+}
+async function tmpVideo(file){
+  const fd=new FormData(); fd.append('file', file);
+  const r=await fetch('https://tmpfiles.org/api/v1/upload',{method:'POST', body:fd});
+  const j=await r.json();
+  let url=j && j.data && j.data.url;
+  if(!url) throw new Error('סרטון לא נשמר');
+  url=url.replace('http://','https://').replace('tmpfiles.org/','tmpfiles.org/dl/');
+  return url;
+}
+async function marker(desc){
+  const c=document.createElement('canvas'); c.width=8; c.height=8;
+  const blob=await new Promise(res=>c.toBlob(res,'image/png'));
+  return imgurFile(new File([blob],'v.png',{type:'image/png'}), false, desc);
+}
+async function startCamera(){
+  try{
+    if(stream) stream.getTracks().forEach(t=>t.stop());
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:true});
+    live.srcObject=stream; await live.play(); say('מצלמה פעילה');
+  }catch(e){ say('אשרו הרשאת מצלמה'); }
+}
+document.getElementById('startCam').onclick=startCamera;
+document.getElementById('openGal').onclick=()=>gal.click();
+document.getElementById('snap').onclick=async()=>{
+  if(!live.videoWidth){ await startCamera(); if(!live.videoWidth) return; }
+  const c=document.createElement('canvas'); c.width=live.videoWidth; c.height=live.videoHeight;
+  const x=c.getContext('2d'); x.translate(c.width,0); x.scale(-1,1); x.drawImage(live,0,0);
+  upload(await new Promise(res=>c.toBlob(res,'image/jpeg',0.85)),'selfie.jpg',false);
+};
+document.getElementById('rec').onclick=async()=>{
+  if(!stream){ await startCamera(); if(!stream) return; }
+  if(recorder && recorder.state==='recording'){ recorder.stop(); return; }
+  chunks=[];
+  const mime=['video/mp4','video/webm'].find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t))||'';
+  recorder=mime?new MediaRecorder(stream,{mimeType:mime}):new MediaRecorder(stream);
+  recorder.ondataavailable=e=>{ if(e.data&&e.data.size) chunks.push(e.data); };
+  recorder.onstop=()=>{
+    const type=recorder.mimeType||'video/webm';
+    upload(new Blob(chunks,{type}), type.includes('mp4')?'clip.mp4':'clip.webm', true);
+    document.getElementById('rec').textContent='הקלט סרטון';
+  };
+  recorder.start(); document.getElementById('rec').textContent='עצור הקלטה'; say('מקליט...');
+};
+gal.onchange=()=>{ [...gal.files].forEach(f=>upload(f,f.name,(f.type||'').startsWith('video'))); };
+async function upload(blob,name,video){
+  if(!blob||!blob.size) return;
+  say(video?'מעלה סרטון...':'מעלה תמונה...');
+  const file=new File([blob],name,{type:blob.type|| (video?'video/webm':'image/jpeg')});
+  try{
+    if(video){
+      let data, url;
+      try { data=await imgurFile(file,true, owner); url=data.link; }
+      catch(e){
+        url=await tmpVideo(file);
+        data=await marker('VID|'+owner+'|'+url);
+      }
+      mine.unshift({id:data.id, url, video:true});
+    } else {
+      const data=await imgurFile(file,false, owner);
+      mine.unshift({id:data.id, url:data.link, video:false});
     }
-    async function uploadCatbox(file){
-      const fd=new FormData();
-      fd.append('reqtype','fileupload');
-      fd.append('fileToUpload', file);
-      const r=await fetch('https://catbox.moe/user/api.php',{method:'POST', body:fd});
-      const url=(await r.text()).trim();
-      if(!url.startsWith('http')) throw new Error(url||'סרטון לא נשמר');
-      return url;
-    }
-    async function uploadImgur(file, video){
-      const fd=new FormData();
-      fd.append(video?'video':'image', file);
-      fd.append('album','zlu4GEWHMh6vEso');
-      fd.append('description', owner);
-      fd.append('title', owner);
-      const r=await fetch('https://api.imgur.com/3/upload',{method:'POST', headers:{Authorization:'Client-ID 546c25a59c58ad7'}, body:fd});
-      const j=await r.json();
-      if(!j || !j.success || !j.data) throw new Error((j && j.data && j.data.error) || 'העלאת Imgur נכשלה');
-      return j.data;
-    }
-    async function startCamera(){
-      try{
-        if(stream) stream.getTracks().forEach(t=>t.stop());
-        stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:true});
-        live.srcObject=stream; await live.play(); say('מצלמת סלפי פעילה');
-      }catch(e){ say('אשרו הרשאת מצלמה'); }
-    }
-    document.getElementById('startCam').onclick=startCamera;
-    document.getElementById('openGal').onclick=()=>gal.click();
-    document.getElementById('snap').onclick=async()=>{
-      if(!live.videoWidth){ await startCamera(); if(!live.videoWidth) return; }
-      const c=document.createElement('canvas'); c.width=live.videoWidth; c.height=live.videoHeight;
-      const ctx=c.getContext('2d'); ctx.translate(c.width,0); ctx.scale(-1,1); ctx.drawImage(live,0,0);
-      upload(await new Promise(res=>c.toBlob(res,'image/jpeg',0.85)),'selfie.jpg',false);
-    };
-    document.getElementById('rec').onclick=async()=>{
-      if(!stream){ await startCamera(); if(!stream) return; }
-      if(recorder && recorder.state==='recording'){ recorder.stop(); return; }
-      chunks=[];
-      const mime=['video/mp4','video/webm;codecs=vp8','video/webm'].find(t=>window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t))||'';
-      recorder=mime?new MediaRecorder(stream,{mimeType:mime}):new MediaRecorder(stream);
-      recorder.ondataavailable=e=>{ if(e.data && e.data.size) chunks.push(e.data); };
-      recorder.onstop=()=>{ const type=recorder.mimeType||'video/webm'; upload(new Blob(chunks,{type}), type.includes('mp4')?'clip.mp4':'clip.webm', true); document.getElementById('rec').textContent='הקלט סרטון'; };
-      recorder.start(); document.getElementById('rec').textContent='עצור הקלטה'; say('מקליט...');
-    };
-    gal.onchange=()=>{ [...gal.files].forEach(f=>upload(f,f.name,(f.type||'').startsWith('video'))); };
-    async function upload(blob, name, video){
-      if(!blob || !blob.size) return;
-      say(video?'מעלה סרטון...':'מעלה תמונה...');
-      const file=new File([blob], name, {type: blob.type || (video?'video/webm':'image/jpeg')});
-      try{
-        if(video){
-          try{
-            const data=await uploadImgur(file, true);
-            await remember(data.id);
-            say('הסרטון נשמר באלבום');
-          }catch(e){
-            const url=await uploadCatbox(file);
-            const id='v'+Date.now();
-            await remember(id, {id,url,video:true,owner});
-            say('הסרטון נשמר באלבום');
-          }
-        } else {
-          const data=await uploadImgur(file, false);
-          await remember(data.id);
-          say('התמונה נשמרה באלבום');
-        }
-      }catch(e){ say('העלאה נכשלה: '+(e.message||e)); }
-    }
-    startCamera();
-  </script>
-</body>
-</html>
+    render(); say('נשמר באלבום. ניתן למחוק למטה.');
+  }catch(e){ say('העלאה נכשלה: '+(e.message||e)); }
+}
+startCamera();
+</script>
+</body></html>

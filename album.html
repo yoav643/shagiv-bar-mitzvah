@@ -3,90 +3,82 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>האלבום המשותף · שגיב</title>
+  <title>האלבום המשותף</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
-    body { margin:0; font-family:Arial,sans-serif; background:#1a2744; }
-    .wrap { max-width:440px; margin:16px auto; background:#f7f1e4; border-radius:24px; padding:16px; }
-    h1,p { text-align:center; }
-    h1 { color:#1a2744; }
-    p { color:#5a5346; }
-    .row { display:flex; gap:8px; margin:12px 0; }
-    a.btn, button.btn { flex:1; text-align:center; text-decoration:none; border:0; border-radius:14px; padding:14px 8px; font-weight:800; font:800 15px Arial; }
-    .navy { background:#1a2744; color:#f3e7b8; }
-    .gold { background:#c9a227; color:#1a2744; }
-    .grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-    .item { background:#fff; border-radius:12px; overflow:hidden; }
-    .item img,.item video { width:100%; height:160px; object-fit:cover; display:block; background:#ddd; }
-    .del { width:100%; border:0; background:#eee; color:#7a2e2e; font-weight:800; padding:8px; }
-    .empty { grid-column:1/-1; text-align:center; font-weight:700; padding:20px; }
+    body{margin:0;font-family:Arial,sans-serif;background:#1a2744}
+    .wrap{max-width:440px;margin:16px auto;background:#f7f1e4;border-radius:24px;padding:16px}
+    h1,p{text-align:center}h1{color:#1a2744}p{color:#5a5346}
+    .row{display:flex;gap:8px;margin:12px 0}
+    a.btn,button.btn{flex:1;text-align:center;text-decoration:none;border:0;border-radius:14px;padding:14px 8px;font-weight:800;font:800 15px Arial}
+    .navy{background:#1a2744;color:#f3e7b8}.gold{background:#c9a227;color:#1a2744}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .item{background:#fff;border-radius:12px;overflow:hidden}
+    .item img,.item video{width:100%;height:160px;object-fit:cover;display:block;background:#ddd}
+    .del{width:100%;border:0;background:#eee;color:#7a2e2e;font-weight:800;padding:8px}
+    .empty{grid-column:1/-1;text-align:center;font-weight:700;padding:18px}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>האלבום המשותף</h1>
-    <p>מחיקה רק לתמונות שהעליתם מהטלפון הזה</p>
-    <div class="row">
-      <a class="btn gold" href="photos.html">להעלות</a>
-      <a class="btn navy" href="./">חזרה</a>
-    </div>
-    <div class="row"><button class="btn gold" id="dl" type="button">הורדת הכל למחשב</button></div>
-    <div id="grid" class="grid"></div>
-    <p id="note"></p>
+<div class="wrap">
+  <h1>האלבום המשותף</h1>
+  <p>מחיקה רק למה שהעליתם</p>
+  <div class="row">
+    <a class="btn gold" id="up" href="photos.html">להעלות</a>
+    <a class="btn navy" href="./">חזרה</a>
   </div>
-  <script>
-    const ALBUM_ID='LZUxwoK', HASH='zlu4GEWHMh6vEso', CLIENT='Client-ID 546c25a59c58ad7';
-    const STORE='https://extendsclass.com/api/json-storage/bin/bacfbbe';
-    const grid=document.getElementById('grid'), note=document.getElementById('note'), dl=document.getElementById('dl');
-    let LAST=[], owner=localStorage.getItem('shagiv-owner')||'';
-    if(!owner){ owner='u'+Math.random().toString(36).slice(2,10); localStorage.setItem('shagiv-owner', owner); }
-    async function store(){ try{ return await (await fetch(STORE+'?t='+Date.now(),{cache:'no-store'})).json(); }catch(e){ return {}; } }
-    function isMine(it, owners){ return it.owner===owner || (owners&&owners[it.id]===owner); }
-    function draw(list, owners){
-      LAST=list||[];
-      if(!LAST.length){ grid.innerHTML='<div class="empty">עדיין אין תמונות</div>'; return; }
-      grid.innerHTML=LAST.map(it=>{
-        const media=it.video?'<video src="'+it.url+'" controls playsinline></video>':'<a href="'+it.url+'" target="_blank" rel="noopener"><img src="'+it.url+'" alt=""></a>';
-        const del=isMine(it,owners)?'<button class="del" data-id="'+it.id+'" data-extra="'+(it.extra?'1':'')+'">מחיקת התמונה שלי</button>':'';
-        return '<div class="item">'+media+del+'</div>';
-      }).join('');
-      grid.querySelectorAll('.del').forEach(b=>b.onclick=()=>delOne(b.dataset.id, b.dataset.extra==='1'));
-      note.textContent=LAST.length+' פריטים';
-    }
-    async function delOne(id, extra){
-      if(!confirm('למחוק את התמונה שלכם?')) return;
-      note.textContent='מוחק...';
-      try{
-        if(extra){
-          const data=await store();
-          data.extras=(data.extras||[]).filter(x=>x.id!==id);
-          await fetch(STORE,{method:'PUT', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(data)});
-        } else {
-          await fetch('https://api.imgur.com/3/album/'+HASH+'/remove_images',{method:'POST', headers:{Authorization:CLIENT}, body:new URLSearchParams({ids:id})});
-        }
-      }catch(e){}
-      setTimeout(load,600);
-    }
-    async function load(){
-      try{
-        const [imgRes, data]=await Promise.all([
-          fetch('https://api.imgur.com/3/album/'+ALBUM_ID+'/images?t='+Date.now(),{headers:{Authorization:CLIENT},cache:'no-store'}),
-          store()
-        ]);
-        const js=await imgRes.json();
-        const imgs=(js.data||[]).map(x=>({id:x.id,url:x.link,video:String(x.type||'').startsWith('video')||!!x.mp4,owner:x.description||x.title||'',extra:false}));
-        const extras=(data.extras||[]).map(x=>({id:x.id,url:x.url,video:!!x.video,owner:x.owner||'',extra:true}));
-        draw([...extras, ...imgs], data.owners||{});
-      }catch(e){ note.textContent='שגיאה בטעינה'; }
-    }
-    dl.onclick=async()=>{
-      if(!LAST.length) return;
-      const zip=new JSZip(); let n=0;
-      for(const it of LAST){ try{ zip.file((it.video?'clip':'pic')+'-'+it.id+'.'+(it.video?'mp4':'jpg'), await (await fetch(it.url)).blob()); n++; }catch(e){} }
-      if(!n) return;
-      const a=document.createElement('a'); a.href=URL.createObjectURL(await zip.generateAsync({type:'blob'})); a.download='album-shagiv.zip'; a.click();
-    };
-    load(); setInterval(load,8000);
-  </script>
-</body>
-</html>
+  <div class="row"><button class="btn gold" id="dl" type="button">הורדת הכל למחשב</button></div>
+  <div id="grid" class="grid"></div>
+  <p id="note"></p>
+</div>
+<script>
+const ALBUM_ID='LZUxwoK', HASH='zlu4GEWHMh6vEso', AUTH='Client-ID 546c25a59c58ad7';
+const q=new URLSearchParams(location.search).get('me');
+let owner=q || localStorage.getItem('shagiv-owner') || '';
+if(q) localStorage.setItem('shagiv-owner', q);
+if(!owner){ owner='u'+Math.random().toString(36).slice(2,10); localStorage.setItem('shagiv-owner', owner); }
+document.getElementById('up').href='photos.html';
+const grid=document.getElementById('grid'), note=document.getElementById('note');
+let LAST=[];
+function parseDesc(d){
+  d=String(d||'');
+  if(d.startsWith('VID|')){ const p=d.split('|'); return {video:true, owner:p[1]||'', url:p.slice(2).join('|')}; }
+  return {video:false, owner:d, url:''};
+}
+function draw(list){
+  LAST=list;
+  if(!list.length){ grid.innerHTML='<div class="empty">עדיין אין תמונות</div>'; return; }
+  grid.innerHTML=list.map(it=>{
+    const media=it.video?'<video src="'+it.url+'" controls playsinline></video>':'<a href="'+it.url+'" target="_blank" rel="noopener"><img src="'+it.url+'"></a>';
+    const del=(it.owner && owner && it.owner===owner)?'<button class="del" data-id="'+it.id+'">מחיקת התמונה שלי</button>':'';
+    return '<div class="item">'+media+del+'</div>';
+  }).join('');
+  grid.querySelectorAll('.del').forEach(b=>b.onclick=()=>delOne(b.dataset.id));
+  note.textContent=list.length+' פריטים';
+}
+async function delOne(id){
+  if(!confirm('למחוק?')) return;
+  try{ await fetch('https://api.imgur.com/3/album/'+HASH+'/remove_images',{method:'POST', headers:{Authorization:AUTH}, body:new URLSearchParams({ids:id})}); }catch(e){}
+  setTimeout(load,600);
+}
+async function load(){
+  try{
+    const res=await fetch('https://api.imgur.com/3/album/'+ALBUM_ID+'/images?t='+Date.now(),{headers:{Authorization:AUTH},cache:'no-store'});
+    const js=await res.json();
+    const list=(js.data||[]).map(x=>{
+      const meta=parseDesc(x.description||x.title||'');
+      return {id:x.id, url: meta.video && meta.url ? meta.url : x.link, video: meta.video || String(x.type||'').startsWith('video') || !!x.mp4, owner: meta.owner};
+    }).filter(x=>x.url && !String(x.url).endsWith('/v.png'));
+    draw(list);
+  }catch(e){ note.textContent='שגיאה בטעינה'; }
+}
+document.getElementById('dl').onclick=async()=>{
+  if(!LAST.length) return;
+  const zip=new JSZip(); let n=0;
+  for(const it of LAST){ try{ zip.file((it.video?'clip':'pic')+'-'+it.id+(it.video?'.mp4':'.jpg'), await (await fetch(it.url)).blob()); n++; }catch(e){} }
+  if(!n) return;
+  const a=document.createElement('a'); a.href=URL.createObjectURL(await zip.generateAsync({type:'blob'})); a.download='album-shagiv.zip'; a.click();
+};
+load(); setInterval(load,8000);
+</script>
+</body></html>
