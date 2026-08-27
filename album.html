@@ -22,9 +22,8 @@
 <body>
 <div class="wrap">
   <h1>האלבום המשותף</h1>
-  <p>מחיקה רק למה שהעליתם</p>
   <div class="row">
-    <a class="btn gold" id="up" href="photos.html">להעלות</a>
+    <a class="btn gold" href="photos.html">להעלות</a>
     <a class="btn navy" href="./">חזרה</a>
   </div>
   <div class="row"><button class="btn gold" id="dl" type="button">הורדת הכל למחשב</button></div>
@@ -36,21 +35,17 @@ const ALBUM_ID='LZUxwoK', HASH='zlu4GEWHMh6vEso', AUTH='Client-ID 546c25a59c58ad
 const q=new URLSearchParams(location.search).get('me');
 let owner=q || localStorage.getItem('shagiv-owner') || '';
 if(q) localStorage.setItem('shagiv-owner', q);
-if(!owner){ owner='u'+Math.random().toString(36).slice(2,10); localStorage.setItem('shagiv-owner', owner); }
-document.getElementById('up').href='photos.html';
+function mineIds(){ try{return JSON.parse(localStorage.getItem('shagiv-mine-ids')||'[]');}catch(e){return[];} }
 const grid=document.getElementById('grid'), note=document.getElementById('note');
 let LAST=[];
-function parseDesc(d){
-  d=String(d||'');
-  if(d.startsWith('VID|')){ const p=d.split('|'); return {video:true, owner:p[1]||'', url:p.slice(2).join('|')}; }
-  return {video:false, owner:d, url:''};
-}
+function parseDesc(d){ d=String(d||''); if(d.startsWith('VID|')){ const p=d.split('|'); return {video:true, owner:p[1]||'', url:p.slice(2).join('|')}; } return {video:false, owner:d, url:''}; }
+function canDel(it){ const ids=mineIds(); return (it.owner && owner && it.owner===owner) || ids.includes(it.id); }
 function draw(list){
   LAST=list;
   if(!list.length){ grid.innerHTML='<div class="empty">עדיין אין תמונות</div>'; return; }
   grid.innerHTML=list.map(it=>{
     const media=it.video?'<video src="'+it.url+'" controls playsinline></video>':'<a href="'+it.url+'" target="_blank" rel="noopener"><img src="'+it.url+'"></a>';
-    const del=(it.owner && owner && it.owner===owner)?'<button class="del" data-id="'+it.id+'">מחיקת התמונה שלי</button>':'';
+    const del=canDel(it)?'<button class="del" data-id="'+it.id+'">מחיקת התמונה שלי</button>':'';
     return '<div class="item">'+media+del+'</div>';
   }).join('');
   grid.querySelectorAll('.del').forEach(b=>b.onclick=()=>delOne(b.dataset.id));
@@ -59,6 +54,7 @@ function draw(list){
 async function delOne(id){
   if(!confirm('למחוק?')) return;
   try{ await fetch('https://api.imgur.com/3/album/'+HASH+'/remove_images',{method:'POST', headers:{Authorization:AUTH}, body:new URLSearchParams({ids:id})}); }catch(e){}
+  localStorage.setItem('shagiv-mine-ids', JSON.stringify(mineIds().filter(x=>x!==id)));
   setTimeout(load,600);
 }
 async function load(){
@@ -68,7 +64,7 @@ async function load(){
     const list=(js.data||[]).map(x=>{
       const meta=parseDesc(x.description||x.title||'');
       return {id:x.id, url: meta.video && meta.url ? meta.url : x.link, video: meta.video || String(x.type||'').startsWith('video') || !!x.mp4, owner: meta.owner};
-    }).filter(x=>x.url && !String(x.url).endsWith('/v.png'));
+    }).filter(x=>x.url);
     draw(list);
   }catch(e){ note.textContent='שגיאה בטעינה'; }
 }
