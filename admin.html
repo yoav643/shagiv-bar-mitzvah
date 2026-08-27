@@ -23,7 +23,6 @@
     .wish{background:#fff;border-radius:14px;padding:12px;margin-bottom:8px}
     .wish b{display:block;color:var(--navy);margin-bottom:6px}
     .wish p{white-space:pre-wrap;line-height:1.5;max-height:6em;overflow:hidden}
-    .wish.open p{max-height:none}
     .wish textarea,.wish input{width:100%;margin:6px 0;padding:8px;border-radius:10px;border:1px solid #d7cbb3;font:16px Assistant,sans-serif}
     .wish textarea{min-height:120px}
     a.link{display:block;text-align:center;text-decoration:none;margin-top:12px;color:var(--navy)}
@@ -37,6 +36,9 @@
     <a class="link navy" href="album.html" style="flex:1">אלבום</a>
     <a class="link gold" href="wishes.html" style="flex:1">ברכות</a>
   </div>
+  <h2>מי חיפש שולחן</h2>
+  <button class="red" id="delLogs" type="button" style="width:100%">מחיקת יומן החיפושים</button>
+  <div id="logs"></div>
   <h2>ברכות מאורחים</h2>
   <button class="red" id="delWishes" type="button" style="width:100%">מחיקת כל הברכות</button>
   <div id="wishes"></div>
@@ -48,8 +50,8 @@
 </div>
 <script>
 const ALBUM='LZUxwoK', HASH='zlu4GEWHMh6vEso', AUTH='Client-ID 546c25a59c58ad7';
-const wishesBox=document.getElementById('wishes'), grid=document.getElementById('grid'), note=document.getElementById('note');
-let wishes=[], media=[];
+const wishesBox=document.getElementById('wishes'), grid=document.getElementById('grid'), note=document.getElementById('note'), logsBox=document.getElementById('logs');
+let wishes=[], media=[], logs=[];
 function parseDesc(d){
   d=String(d||'');
   if(d.startsWith('WISH|')){
@@ -57,6 +59,12 @@ function parseDesc(d){
     let name='', text='';
     try{ name=decodeURIComponent(p[2]||''); text=decodeURIComponent(p.slice(3).join('|')||''); }catch(e){ name=p[2]||''; text=p.slice(3).join('|'); }
     return {type:'wish', owner:p[1]||'', name, text};
+  }
+  if(d.startsWith('LOG|')){
+    const p=d.split('|');
+    let name='';
+    try{ name=decodeURIComponent(p[2]||''); }catch(e){ name=p[2]||''; }
+    return {type:'log', phone:p[1]||'', name, table:p[3]||'', ts:Number(p[4]||0)};
   }
   if(d.startsWith('VID|')){ const p=d.split('|'); return {type:'video', url:p.slice(2).join('|')}; }
   return {type:'photo'};
@@ -89,18 +97,22 @@ function cardBlob(name,text){
   lines.forEach((ln,i)=>x.fillText(ln,860,130+i*38));
   return new Promise(res=>c.toBlob(res,'image/jpeg',0.86));
 }
-function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&','<':'<','>':'>','"':'"',"'":'&#39;'}[c])); }
+function fmtTime(ts){
+  if(!ts) return '';
+  const d=new Date(ts);
+  const p=n=>String(n).padStart(2,'0');
+  return p(d.getHours())+':'+p(d.getMinutes())+' · '+p(d.getDate())+'/'+p(d.getMonth()+1);
+}
 function draw(){
-  wishesBox.innerHTML=wishes.map(w=>'<div class="wish" data-id="'+w.id+'">'+ 
-    '<b>'+esc(w.name||'אורח')+'</b>'+
-    (w.text?'<p>'+esc(w.text)+'</p>':(w.img?'<img src="'+w.img+'" alt="" style="width:100%;border-radius:10px">':''))+
-    '<div class="row"><button class="gold edit" data-id="'+w.id+'">עריכה</button><button class="red delw" data-id="'+w.id+'">מחיקה</button></div></div>'
-  ).join('') || '<p style="text-align:center">אין ברכות</p>';
+  logsBox.innerHTML=logs.map(l=>'<div class="wish"><b>'+esc(l.name||'לא ידוע')+'</b><p style="max-height:none">שולחן '+esc(l.table||'-')+' · '+esc(l.phone)+'<br>'+fmtTime(l.ts)+'</p><button class="red delw" data-id="'+l.id+'" style="width:100%;margin-top:8px">מחיקה</button></div>').join('') || '<p style="text-align:center">עדיין אין חיפושים</p>';
+  wishesBox.innerHTML=wishes.map(w=>'<div class="wish" data-id="'+w.id+'"><b>'+esc(w.name||'אורח')+'</b>'+(w.text?'<p>'+esc(w.text)+'</p>':(w.img?'<img src="'+w.img+'" alt="" style="width:100%;border-radius:10px">':''))+'<div class="row"><button class="gold edit" data-id="'+w.id+'">עריכה</button><button class="red delw" data-id="'+w.id+'">מחיקה</button></div></div>').join('') || '<p style="text-align:center">אין ברכות</p>';
   grid.innerHTML=media.map(it=>'<div class="item">'+(it.video?'<video src="'+it.url+'" controls playsinline></video>':'<img src="'+it.url+'">')+'<button class="red delm" data-id="'+it.id+'">מחיקה</button></div>').join('') || '<p style="grid-column:1/-1;text-align:center">אין תמונות</p>';
   wishesBox.querySelectorAll('.edit').forEach(b=>b.onclick=()=>editWish(b.dataset.id));
   wishesBox.querySelectorAll('.delw').forEach(b=>b.onclick=()=>delOne(b.dataset.id));
+  logsBox.querySelectorAll('.delw').forEach(b=>b.onclick=()=>delOne(b.dataset.id));
   grid.querySelectorAll('.delm').forEach(b=>b.onclick=()=>delOne(b.dataset.id));
-  note.textContent=wishes.length+' ברכות · '+media.length+' קבצי מדיה';
+  note.textContent=logs.length+' חיפושים · '+wishes.length+' ברכות · '+media.length+' מדיה';
 }
 function editWish(id){
   const w=wishes.find(x=>x.id===id); if(!w) return;
@@ -120,8 +132,7 @@ async function saveWish(id, owner){
     const fd=new FormData();
     fd.append('image', new File([blob],'wish.jpg',{type:'image/jpeg'}));
     fd.append('album', HASH);
-    const desc='WISH|'+(owner||'admin')+'|'+encodeURIComponent(name)+'|'+(encodeURIComponent(text).length>900?'':encodeURIComponent(text));
-    fd.append('description', desc.startsWith('WISH|')?('WISH|'+(owner||'admin')+'|'+encodeURIComponent(name)+'|'+encodeURIComponent(text)) : desc);
+    fd.append('description', 'WISH|'+(owner||'admin')+'|'+encodeURIComponent(name)+'|'+encodeURIComponent(text));
     const r=await fetch('https://api.imgur.com/3/upload',{method:'POST', headers:{Authorization:AUTH}, body:fd});
     const j=await r.json();
     if(!j||!j.success) throw new Error('upload');
@@ -136,15 +147,17 @@ async function delOne(id){
   setTimeout(load,700);
 }
 async function load(){
-  wishes=[]; media=[];
+  wishes=[]; media=[]; logs=[];
   try{
     const js=await (await fetch('https://api.imgur.com/3/album/'+ALBUM+'/images?t='+Date.now(),{headers:{Authorization:AUTH},cache:'no-store'})).json();
     for(const x of (js.data||[])){
       const m=parseDesc(x.description||x.title||'');
       if(m.type==='wish') wishes.push({id:x.id,name:m.name,text:m.text,owner:m.owner,img:x.link});
+      else if(m.type==='log') logs.push({id:x.id,phone:m.phone,name:m.name,table:m.table,ts:m.ts});
       else media.push({id:x.id,url:m.type==='video'?(m.url||x.link):x.link,video:m.type==='video'});
     }
   }catch(e){}
+  logs.sort((a,b)=>(b.ts||0)-(a.ts||0));
   draw();
 }
 async function delList(list){
@@ -152,6 +165,7 @@ async function delList(list){
 }
 document.getElementById('delWishes').onclick=async()=>{ if(!confirm('למחוק את כל הברכות?')) return; note.textContent='מוחק ברכות...'; await delList(wishes.slice()); setTimeout(load,1000); };
 document.getElementById('delMedia').onclick=async()=>{ if(!confirm('למחוק את כל התמונות והסרטונים?')) return; note.textContent='מוחק מדיה...'; await delList(media.slice()); setTimeout(load,1000); };
+document.getElementById('delLogs').onclick=async()=>{ if(!confirm('למחוק את יומן החיפושים?')) return; note.textContent='מוחק יומן...'; await delList(logs.slice()); setTimeout(load,1000); };
 load();
 </script>
 </body></html>
