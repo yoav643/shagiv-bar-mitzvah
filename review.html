@@ -13,7 +13,9 @@
     .phone{width:100%;max-width:440px;background:var(--cream);border-radius:28px;padding:20px 16px 28px}
     .badge{width:56px;height:56px;margin:0 auto 8px;border-radius:50%;background:var(--navy);color:#f3e7b8;display:flex;align-items:center;justify-content:center;font-family:"Frank Ruhl Libre",serif;font-weight:900;font-size:24px;border:3px solid #e8d48b}
     h1{text-align:center;font-family:"Frank Ruhl Libre",serif;color:var(--navy);font-size:26px}
-    .sub{text-align:center;color:#5a5346;margin:4px 0 16px}
+    .sub{text-align:center;color:#5a5346;margin:4px 0 12px}
+    .thanks{background:#fff;border:1px solid rgba(201,162,39,.35);border-radius:16px;padding:14px 14px 12px;margin:0 0 16px;text-align:center;color:#2a2418;line-height:1.65}
+    .thanks b{display:block;font-family:"Frank Ruhl Libre",serif;color:var(--navy);font-size:18px;margin-bottom:6px}
     label{display:block;font-weight:800;color:var(--navy);margin:12px 0 6px}
     input,textarea{width:100%;padding:11px 12px;border-radius:12px;border:1.5px solid #d7cbb3;font:16px Assistant,sans-serif;background:#fff}
     textarea{min-height:110px;resize:vertical}
@@ -33,7 +35,13 @@
 <div class="phone">
   <div class="badge">13</div>
   <h1>חוות דעת</h1>
-  <p class="sub">איך היה האירוע? דרגו 1–5 כוכבים</p>
+  <div class="thanks">
+    <b>תודה שבאתם</b>
+    שגיב ומשפחת פסטינגר מודים לכם מהלב על שחלקתם איתנו בבר המצווה.<br>
+    הנוכחות שלכם, החיוכים והאהבה מילאו לנו את הערב.<br>
+    אם יש לכם רגע נשמח אם תשאירו לנו כמה מילים על האירוע — זה יעזור לנו מאוד.
+  </div>
+  <p class="sub">דרגו 1–5 כוכבים לכל נושא</p>
   <div id="form">
     <label>השם שלכם</label>
     <input id="name" placeholder="שם מלא" />
@@ -83,7 +91,7 @@ document.getElementById('send').onclick=async()=>{
     fd.append('description', desc);
     const js=await (await fetch('https://api.imgur.com/3/upload',{method:'POST', headers:{Authorization:AUTH}, body:fd})).json();
     if(!js||!js.success) throw new Error('up');
-    document.getElementById('form').innerHTML='<div class="ok"><h2>תודה רבה!</h2><p>חוות הדעת שלכם נשמרה</p></div>';
+    document.getElementById('form').innerHTML='<div class="ok"><h2>תודה רבה!</h2><p>שגיב והמשפחה מוקירים לכם מאוד</p></div>';
   }catch(e){
     note.textContent='השליחה נכשלה, נסו שוב';
     document.getElementById('send').disabled=false;
