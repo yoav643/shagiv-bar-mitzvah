@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#1a2744" />
+  <title>חוות דעת · בר המצווה של שגיב</title>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;700;800&family=Frank+Ruhl+Libre:wght@700;900&display=swap" rel="stylesheet" />
+  <style>
+    :root{--navy:#1a2744;--gold:#c9a227;--cream:#f7f1e4}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{min-height:100vh;background:radial-gradient(ellipse at top,#2c3d62,#1a2744 55%,#10182a);font-family:Assistant,Arial,sans-serif;display:flex;justify-content:center;padding:16px}
+    .phone{width:100%;max-width:440px;background:var(--cream);border-radius:28px;padding:20px 16px 28px}
+    .badge{width:56px;height:56px;margin:0 auto 8px;border-radius:50%;background:var(--navy);color:#f3e7b8;display:flex;align-items:center;justify-content:center;font-family:"Frank Ruhl Libre",serif;font-weight:900;font-size:24px;border:3px solid #e8d48b}
+    h1{text-align:center;font-family:"Frank Ruhl Libre",serif;color:var(--navy);font-size:26px}
+    .sub{text-align:center;color:#5a5346;margin:4px 0 16px}
+    label{display:block;font-weight:800;color:var(--navy);margin:12px 0 6px}
+    input,textarea{width:100%;padding:11px 12px;border-radius:12px;border:1.5px solid #d7cbb3;font:16px Assistant,sans-serif;background:#fff}
+    textarea{min-height:110px;resize:vertical}
+    .item{background:#fff;border-radius:16px;padding:12px;margin-bottom:10px;border:1px solid #eadfc8}
+    .item b{display:block;color:var(--navy);margin-bottom:8px}
+    .stars{display:flex;gap:6px;justify-content:center;direction:ltr}
+    .stars button{width:42px;height:42px;border:0;background:transparent;font-size:28px;line-height:1;color:#d7cbb3}
+    .stars button.on{color:#c9a227}
+    .send{width:100%;margin-top:14px;border:0;border-radius:14px;padding:14px;font:800 16px Assistant,sans-serif;background:var(--gold);color:var(--navy)}
+    a.back{display:block;text-align:center;margin-top:12px;color:var(--navy);font-weight:800;text-decoration:none}
+    #note{text-align:center;margin-top:10px;color:#5a5346}
+    .ok{text-align:center;padding:28px 8px}
+    .ok h2{font-family:"Frank Ruhl Libre",serif;color:var(--navy);margin-bottom:8px}
+  </style>
+</head>
+<body>
+<div class="phone">
+  <div class="badge">13</div>
+  <h1>חוות דעת</h1>
+  <p class="sub">איך היה האירוע? דרגו 1–5 כוכבים</p>
+  <div id="form">
+    <label>השם שלכם</label>
+    <input id="name" placeholder="שם מלא" />
+    <div id="cats"></div>
+    <label>משוב חופשי</label>
+    <textarea id="text" placeholder="מה אהבתם, מה שיפר לשפר..."></textarea>
+    <button class="send" id="send" type="button">שליחת חוות דעת</button>
+    <p id="note"></p>
+  </div>
+  <a class="back" href="./">חזרה לאתר</a>
+</div>
+<script>
+const HASH='zlu4GEWHMh6vEso', AUTH='Client-ID 546c25a59c58ad7';
+const CATS=[
+  ['hall','עיצוב האולם'],
+  ['clean','ניקיון'],
+  ['service','שירות'],
+  ['food','אוכל'],
+  ['music','מוזיקה']
+];
+const rates={};
+let owner=localStorage.getItem('shagiv-owner')||('g-'+Math.random().toString(36).slice(2,10));
+localStorage.setItem('shagiv-owner', owner);
+const box=document.getElementById('cats');
+box.innerHTML=CATS.map(([id,label])=>'<div class="item"><b>'+label+'</b><div class="stars" data-id="'+id+'">'+[1,2,3,4,5].map(n=>'<button type="button" data-n="'+n+'">★</button>').join('')+'</div></div>').join('');
+box.querySelectorAll('.stars').forEach(row=>{
+  row.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{
+    const n=Number(btn.dataset.n); rates[row.dataset.id]=n;
+    row.querySelectorAll('button').forEach(b=>b.classList.toggle('on', Number(b.dataset.n)<=n));
+  });
+});
+function tiny(){ const c=document.createElement('canvas'); c.width=8;c.height=8; c.getContext('2d').fillRect(0,0,8,8); return new Promise(r=>c.toBlob(r,'image/jpeg',.4)); }
+document.getElementById('send').onclick=async()=>{
+  const name=document.getElementById('name').value.trim();
+  const text=document.getElementById('text').value.trim();
+  const note=document.getElementById('note');
+  if(!name){ note.textContent='כתבו שם'; return; }
+  for(const [id,label] of CATS){ if(!rates[id]){ note.textContent='דרגו כוכבים לכל הנושאים — חסר: '+label; return; } }
+  note.textContent='שולח...';
+  document.getElementById('send').disabled=true;
+  try{
+    const payload=[rates.hall,rates.clean,rates.service,rates.food,rates.music,Date.now()].join('|');
+    const desc='REV|'+owner+'|'+encodeURIComponent(name)+'|'+payload+'|'+encodeURIComponent(text);
+    const fd=new FormData();
+    fd.append('image', new File([await tiny()],'rev.jpg',{type:'image/jpeg'}));
+    fd.append('album', HASH);
+    fd.append('description', desc);
+    const js=await (await fetch('https://api.imgur.com/3/upload',{method:'POST', headers:{Authorization:AUTH}, body:fd})).json();
+    if(!js||!js.success) throw new Error('up');
+    document.getElementById('form').innerHTML='<div class="ok"><h2>תודה רבה!</h2><p>חוות הדעת שלכם נשמרה</p></div>';
+  }catch(e){
+    note.textContent='השליחה נכשלה, נסו שוב';
+    document.getElementById('send').disabled=false;
+  }
+};
+</script>
+</body></html>

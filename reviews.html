@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>סטטיסטיקת חוות דעת</title>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;700;800&family=Frank+Ruhl+Libre:wght@700;900&display=swap" rel="stylesheet" />
+  <style>
+    :root{--navy:#1a2744;--gold:#c9a227;--cream:#f7f1e4}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{min-height:100vh;background:#1a2744;font-family:Assistant,Arial,sans-serif;display:flex;justify-content:center;padding:16px}
+    .wrap{width:100%;max-width:440px;background:var(--cream);border-radius:24px;padding:16px}
+    h1,h2{text-align:center;color:var(--navy)} h1{font-family:"Frank Ruhl Libre",serif;margin-bottom:8px}
+    h2{font-size:18px;margin:18px 0 8px}
+    a.btn,button{display:block;text-align:center;text-decoration:none;border:0;border-radius:12px;padding:12px;font:800 14px Assistant,sans-serif;margin-bottom:8px}
+    .navy{background:var(--navy);color:#f3e7b8}
+    .gold{background:var(--gold);color:var(--navy)}
+    .red{background:#7a2e2e;color:#fff;width:100%}
+    .stat{background:#fff;border-radius:14px;padding:12px;margin-bottom:8px;border:1px solid #eadfc8}
+    .stat .top{display:flex;justify-content:space-between;font-weight:800;color:var(--navy);margin-bottom:6px}
+    .bar{height:10px;background:#eadfc8;border-radius:99px;overflow:hidden}
+    .bar i{display:block;height:100%;background:var(--gold);width:0}
+    .stars{color:#c9a227;letter-spacing:1px}
+    .card{background:#fff;border-radius:14px;padding:12px;margin-bottom:8px}
+    .card b{display:block;color:var(--navy);margin-bottom:4px}
+    .card .meta{color:#7a7366;font-size:13px;margin-bottom:6px}
+    .card p{white-space:pre-wrap;line-height:1.5}
+    #note{text-align:center;color:#5a5346;margin-top:8px}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>חוות דעת</h1>
+  <a class="btn navy" href="admin.html">חזרה לניהול</a>
+  <p id="sum" style="text-align:center;font-weight:800;color:#1a2744">טוען...</p>
+  <div id="stats"></div>
+  <h2>תגובות כתובות</h2>
+  <button class="red" id="delAll" type="button">מחיקת כל חוות הדעת</button>
+  <div id="list"></div>
+  <p id="note"></p>
+</div>
+<script>
+const ALBUM='LZUxwoK', HASH='zlu4GEWHMh6vEso', AUTH='Client-ID 546c25a59c58ad7';
+const LABELS={hall:'עיצוב האולם',clean:'ניקיון',service:'שירות',food:'אוכל',music:'מוזיקה'};
+const KEYS=['hall','clean','service','food','music'];
+let reviews=[];
+function dec(s){ try{return decodeURIComponent(s||'');}catch(e){return s||'';} }
+function parse(d){
+  d=String(d||''); if(!d.startsWith('REV|')) return null;
+  const p=d.split('|');
+  return {owner:p[1]||'', name:dec(p[2]), hall:+p[3]||0, clean:+p[4]||0, service:+p[5]||0, food:+p[6]||0, music:+p[7]||0, ts:+p[8]||0, text:dec(p.slice(9).join('|'))};
+}
+function avg(k){ if(!reviews.length) return 0; return reviews.reduce((s,r)=>s+(r[k]||0),0)/reviews.length; }
+function stars(n){ n=Math.round(n); return '★'.repeat(n)+'☆'.repeat(5-n); }
+function esc(s){ return String(s||'').replace(/[&<>]/g,c=>({'&':'&','<':'<','>':'>'}[c])); }
+function fmt(ts){ if(!ts) return ''; const d=new Date(ts); const p=n=>String(n).padStart(2,'0'); return p(d.getHours())+':'+p(d.getMinutes())+' · '+p(d.getDate())+'/'+p(d.getMonth()+1); }
+function draw(){
+  document.getElementById('sum').textContent=reviews.length? (reviews.length+' חוות דעת · ממוצע כללי '+(KEYS.reduce((s,k)=>s+avg(k),0)/5).toFixed(1)+' / 5') : 'עדיין אין חוות דעת';
+  document.getElementById('stats').innerHTML=KEYS.map(k=>{
+    const a=avg(k);
+    return '<div class="stat"><div class="top"><span>'+LABELS[k]+'</span><span>'+(reviews.length?a.toFixed(1):'-')+' <span class="stars">'+stars(a)+'</span></span></div><div class="bar"><i style="width:'+(a/5*100)+'%"></i></div></div>';
+  }).join('');
+  document.getElementById('list').innerHTML=reviews.map(r=>'<div class="card"><b>'+esc(r.name||'אורח')+'</b><div class="meta">'+fmt(r.ts)+'<br>'+KEYS.map(k=>LABELS[k]+' '+r[k]+'/5').join(' · ')+'</div>'+(r.text?'<p>'+esc(r.text)+'</p>':'')+'<button class="red" data-id="'+r.id+'" style="margin-top:8px">מחיקה</button></div>').join('') || '<p style="text-align:center;color:#5a5346">אין תגובות</p>';
+  document.querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>delOne(b.dataset.id));
+}
+async function load(){
+  reviews=[];
+  try{
+    const js=await (await fetch('https://api.imgur.com/3/album/'+ALBUM+'/images?t='+Date.now(),{headers:{Authorization:AUTH},cache:'no-store'})).json();
+    for(const x of (js.data||[])){
+      const r=parse(x.description||x.title||'');
+      if(r) reviews.push(Object.assign({id:x.id}, r));
+    }
+  }catch(e){}
+  reviews.sort((a,b)=>(b.ts||0)-(a.ts||0));
+  draw();
+}
+async function delOne(id){
+  if(!confirm('למחוק חוות דעת?')) return;
+  try{ await fetch('https://api.imgur.com/3/album/'+HASH+'/remove_images',{method:'POST', headers:{Authorization:AUTH}, body:new URLSearchParams({ids:id})}); }catch(e){}
+  setTimeout(load,700);
+}
+document.getElementById('delAll').onclick=async()=>{
+  if(!confirm('למחוק את כל חוות הדעת?')) return;
+  for(const r of reviews){ try{ await fetch('https://api.imgur.com/3/album/'+HASH+'/remove_images',{method:'POST', headers:{Authorization:AUTH}, body:new URLSearchParams({ids:r.id})}); }catch(e){} }
+  setTimeout(load,900);
+};
+load();
+</script>
+</body></html>
