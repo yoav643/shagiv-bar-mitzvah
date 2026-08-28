@@ -37,6 +37,7 @@
     <a class="link gold" href="wishes.html" style="flex:1">ברכות</a>
   </div>
   <a class="link gold" href="gifts.html" style="width:100%;margin:0">כסף מהאורחים</a>
+  <a class="link navy" href="reviews.html" style="width:100%;margin:8px 0 0">חוות דעת וסטטיסטיקה</a>
   <h2>מי חיפש שולחן</h2>
   <button class="red" id="delLogs" type="button" style="width:100%">מחיקת יומן החיפושים</button>
   <div id="logs"></div>
@@ -67,6 +68,7 @@ function parseDesc(d){
     try{ name=decodeURIComponent(p[2]||''); }catch(e){ name=p[2]||''; }
     return {type:'log', phone:p[1]||'', name, table:p[3]||'', ts:Number(p[4]||0)};
   }
+  if(d.startsWith('REV|')||d.startsWith('CASH')) return {type:'skip'};
   if(d.startsWith('VID|')){ const p=d.split('|'); return {type:'video', url:p.slice(2).join('|')}; }
   return {type:'photo'};
 }
@@ -155,7 +157,7 @@ async function load(){
       const m=parseDesc(x.description||x.title||'');
       if(m.type==='wish') wishes.push({id:x.id,name:m.name,text:m.text,owner:m.owner,img:x.link});
       else if(m.type==='log') logs.push({id:x.id,phone:m.phone,name:m.name,table:m.table,ts:m.ts});
-      else media.push({id:x.id,url:m.type==='video'?(m.url||x.link):x.link,video:m.type==='video'});
+      else if(m.type!=='skip') media.push({id:x.id,url:m.type==='video'?(m.url||x.link):x.link,video:m.type==='video'});
     }
   }catch(e){}
   logs.sort((a,b)=>(b.ts||0)-(a.ts||0));
