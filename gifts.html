@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>כסף מהאורחים</title>
   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;700;800&family=Frank+Ruhl+Libre:wght@700;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <style>
     :root{--navy:#1a2744;--gold:#c9a227;--cream:#f7f1e4}
     *{box-sizing:border-box;margin:0;padding:0}
@@ -58,6 +59,7 @@
     <button type="button" id="missBtn">בלי סכום</button>
     <button type="button" id="hasBtn">עם סכום</button>
   </div>
+  <button class="add" id="xlsBtn" type="button">ייצוא לאקסל</button>
   <datalist id="cats">
     <option value="עבודה טלי"></option><option value="עבודה יואב"></option>
     <option value="חברים יואב"></option><option value="חברים טלי"></option>
@@ -88,6 +90,39 @@ function people(){
     .concat((file.extras||[]).map(g=>Object.assign({extra:true, guests:g.guests||1},g)));
 }
 function target(k){ return (file.guests||[]).find(g=>keyOf(g)===k) || (file.extras||[]).find(g=>keyOf(g)===k); }
+function visible(){
+  const q=document.getElementById('q').value.trim();
+  return people().filter(g=>{
+    if(filterMode==='miss' && num(g.amount)) return false;
+    if(filterMode==='has' && !num(g.amount)) return false;
+    if(!q) return true;
+    return g.name.includes(q)||String(g.table)===q||(g.desc||'').includes(q);
+  }).sort((a,b)=>(Number(a.table)||99)-(Number(b.table)||99)||a.name.localeCompare(b.name,'he'));
+}
+function exportExcel(){
+  const rows=visible();
+  const data=[['שם','שולחן','מספר אורחים','סכום','תיאור','טלפונים','נוסף']];
+  let sum=0;
+  for(const g of rows){
+    const amt=num(g.amount); sum+=amt;
+    data.push([g.name, g.table||'', g.guests||1, amt||'', g.desc||'', (g.phones||[]).join(', '), g.extra?'כן':'']);
+  }
+  data.push([]);
+  data.push(['סה"כ','','',sum,'','','']);
+  if(window.XLSX){
+    const ws=XLSX.utils.aoa_to_sheet(data);
+    ws['!cols']=[{wch:24},{wch:10},{wch:14},{wch:10},{wch:22},{wch:22},{wch:8}];
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'כסף');
+    XLSX.writeFile(wb, 'כסף-אורחים-שגיב.xlsx');
+    note.textContent='הקובץ הורד';
+    return;
+  }
+  const csv='\ufeff'+data.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download='כסף-אורחים-שגיב.csv'; a.click();
+}
 async function loadJson(){
   const r=await fetch(API+'?t='+Date.now(), {headers: token()?{Authorization:'Bearer '+token(), Accept:'application/vnd.github+json'}:{Accept:'application/vnd.github+json'}, cache:'no-store'});
   if(r.ok){
@@ -121,16 +156,9 @@ function totals(){
   document.getElementById('hasBtn').textContent='עם סכום ('+filled+')';
 }
 function draw(){
-  const q=document.getElementById('q').value.trim();
-  const rows=people().sort((a,b)=>(Number(a.table)||99)-(Number(b.table)||99)||a.name.localeCompare(b.name,'he'));
-  const filt=rows.filter(g=>{
-    if(filterMode==='miss' && num(g.amount)) return false;
-    if(filterMode==='has' && !num(g.amount)) return false;
-    if(!q) return true;
-    return g.name.includes(q)||String(g.table)===q||(g.desc||'').includes(q);
-  });
+  const rows=visible();
   let html='', last='__';
-  for(const g of filt){
+  for(const g of rows){
     const k=keyOf(g);
     if(String(g.table)!==last){ html+='<div class="tbl">'+(g.table?('שולחן '+g.table):'ללא שולחן')+'</div>'; last=String(g.table); }
     html+='<div class="row"><div class="top"><div class="name">'+g.name+'<span class="meta">'+(g.guests||1)+' אורחים'+(g.extra?' · נוסף':'')+'</span></div>';
@@ -160,6 +188,7 @@ document.getElementById('addBtn').onclick=async()=>{
   document.getElementById('newName').value='';
   draw(); await saveJson();
 };
+document.getElementById('xlsBtn').onclick=exportExcel;
 document.getElementById('q').oninput=draw;
 const allBtn=document.getElementById('allBtn'), missBtn=document.getElementById('missBtn'), hasBtn=document.getElementById('hasBtn');
 allBtn.onclick=()=>{filterMode='all'; document.querySelectorAll('.filt button').forEach(b=>b.classList.remove('on')); allBtn.classList.add('on'); draw();};
