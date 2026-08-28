@@ -84,7 +84,7 @@ async function load(){
     const js=await (await fetch('https://api.imgur.com/3/album/'+ALBUM_ID+'/images?t='+Date.now(),{headers:{Authorization:AUTH},cache:'no-store'})).json();
     for(const x of (js.data||[])){
       const rawDesc=String(x.description||x.title||'');
-      if(rawDesc.startsWith('WISH|')||rawDesc.startsWith('LOG|')||rawDesc.startsWith('CASH')) continue;
+      if(rawDesc.startsWith('WISH|')||rawDesc.startsWith('LOG|')||rawDesc.startsWith('CASH')||rawDesc.startsWith('REV|')) continue;
       const meta=parseDesc(rawDesc);
       const video=!!meta.video;
       let url=video?(meta.url||x.link):x.link;
